@@ -1,0 +1,158 @@
+<script setup lang="ts">
+import { Icon } from "@iconify/vue";
+import { useAuthStore } from "@/stores/authStore";
+
+const authStore = useAuthStore();
+const username = ref("");
+const phone = ref("19511053623");
+// sign in buttons
+const isLoading = ref(false);
+const isSignInDisabled = ref(false);
+
+const refLoginForm = ref();
+const isFormValid = ref(true);
+const email = ref("");
+const password = ref("");
+
+// show password field
+const showPassword = ref(false);
+
+// Submit
+const handleRegister = async () => {
+  const { valid } = await refLoginForm.value.validate();
+  if (valid) {
+    isLoading.value = true;
+    isSignInDisabled.value = true;
+    authStore.registerWithUsernameAndPassword(phone.value, password.value, email.value);
+  } else {
+    console.log("no");
+  }
+};
+
+// Error Check
+const emailRules = ref([
+  (v: string) => !!v || "E-mail is required",
+  (v: string) => /.+@.+\..+/.test(v) || "E-mail must be valid",
+]);
+
+const usernameRules = ref([(v: string) => !!v || "Phone is required"]);
+
+const passwordRules = ref([
+  (v: string) => !!v || "Password is required",
+  (v: string) =>
+    (v && v.length <= 10) || "Password must be less than 10 characters",
+]);
+
+
+
+const error = ref(false);
+const errorMessages = ref("");
+
+const resetErrors = () => {
+  error.value = false;
+  errorMessages.value = "";
+};
+</script>
+<template>
+  <v-card color="white" class="pa-3 ma-3" elevation="3">
+    <v-card-title primary-title class="my-4 text-h4">
+      <span class="flex-fill"> {{ $t("register.title") }} </span>
+    </v-card-title>
+    <v-card-subtitle>Let's build amazing products</v-card-subtitle>
+    <!-- sign in form -->
+
+    <v-card-text>
+      <v-form
+        ref="refLoginForm"
+        class="text-left"
+        v-model="isFormValid"
+        lazy-validation
+      >
+        <v-text-field
+          v-model="phone"
+          required
+          :error="error"
+          :label="$t('手机号')"
+          density="default"
+          variant="underlined"
+          color="primary"
+          bg-color="#fff"
+          :rules="usernameRules"
+          name="username"
+          outlined
+          validateOn="blur"
+          @keyup.enter="handleRegister"
+          @change="resetErrors"
+        ></v-text-field>
+        
+        <v-text-field
+          ref="refEmail"
+          v-model="email"
+          required
+          :error="error"
+          :label="$t('register.email')"
+          density="default"
+          variant="underlined"
+          color="primary"
+          bg-color="#fff"
+          :rules="emailRules"
+          name="email"
+          outlined
+          validateOn="blur"
+          @keyup.enter="handleRegister"
+          @change="resetErrors"
+        ></v-text-field>
+        <v-text-field
+          ref="refPassword"
+          v-model="password"
+          :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
+          :type="showPassword ? 'text' : 'password'"
+          :error="error"
+          :error-messages="errorMessages"
+          :label="$t('register.password')"
+          density="default"
+          variant="underlined"
+          color="primary"
+          bg-color="#fff"
+          :rules="passwordRules"
+          name="password"
+          outlined
+          validateOn="blur"
+          @change="resetErrors"
+          @keyup.enter="handleRegister"
+          @click:append-inner="showPassword = !showPassword"
+        ></v-text-field>
+        <v-btn
+          :loading="isLoading"
+          :disabled="isSignInDisabled"
+          block
+          size="x-large"
+          color="primary"
+          @click="handleRegister"
+          class="mt-2"
+          >{{ $t("register.button") }}</v-btn
+        >
+
+
+
+        <div class="my-5 text-center">
+          {{ $t("register.agree") }}
+          <br />
+          <router-link class="text-primary" to="">{{
+            $t("common.tos")
+          }}</router-link>
+          &
+          <router-link class="text-primary" to="">{{
+            $t("common.policy")
+          }}</router-link>
+        </div>
+      </v-form></v-card-text
+    >
+  </v-card>
+  <div class="text-center mt-6">
+    {{ $t("register.account") }}
+    <router-link to="/auth/signin" class="text-primary font-weight-bold">
+      {{ $t("register.signin") }}
+    </router-link>
+  </div>
+</template>
