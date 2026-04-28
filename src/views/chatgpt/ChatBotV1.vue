@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import * as live2d from 'live2d-render';
 import { useProfileStore } from "@/stores/profileStore";
-import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import axios from 'axios';
 import { useSnackbarStore } from "@/stores/snackbarStore";
 import AnimationChat from "@/components/animations/AnimationChat1.vue";
@@ -14,6 +14,7 @@ import "md-editor-v3/lib/preview.css";
 import ApiKeyDialog from "@/components/ApiKeyDialog.vue";
 import { userTokenStore } from "@/stores/token";
 
+const tokenStore = userTokenStore();
 const profileStore = useProfileStore();
 const signon = reactive({ ...profileStore.signon });
 const snackbarStore = useSnackbarStore();
@@ -38,50 +39,53 @@ const isLoading = ref(false);
 // 新增：会话管理状态
 const sessionList = ref<Session[]>([]);
 const currentSessionId = ref<number | null>(null);
-const drawer = ref(true); // 控制左侧边栏是否展开
+const drawer = ref(true);
 
 const axiosInstance = axios.create({
   baseURL: 'http://localhost:5000/chat-ai'
 });
 
-// 添加请求拦截器，确保每次聊天都带着身份令牌
+
+const isValidToken = (val: any): val is string => {
+  return typeof val === 'string'
+    && val.length > 10
+    && val !== 'undefined'
+    && val !== 'null'
+    && val !== '';
+};
+
+const getToken = (): string | null => {
+  // 1. tokenStore.token 直接同步自 localStorage['token']，先试
+  if (isValidToken(tokenStore.token)) return tokenStore.token;
+
+  // 2. 直接读 localStorage，逐个 key 尝试
+  for (const key of ['token', 'accessToken', 'userToken']) {
+    const raw = localStorage.getItem(key);
+    if (!raw) continue;
+    if (isValidToken(raw)) return raw;
+    // 尝试 JSON 解析（Pinia persist 有时整体序列化）
+    try {
+      const parsed = JSON.parse(raw);
+      const candidate = parsed?.token ?? parsed?.accessToken ?? parsed?.value;
+      if (isValidToken(candidate)) return candidate;
+    } catch {}
+  }
+
+  return null;
+};
+
+// 请求拦截器：每次请求自动带 token
 axiosInstance.interceptors.request.use(config => {
-  // Use the store to get the token, falling back to localStorage if necessary
-  const tokenStore = userTokenStore();
-  let token = tokenStore.token;
-
-  if (!token) {
-    // Fallback: Try to get it from localStorage directly
-    const storedItem = localStorage.getItem('token');
-    if (storedItem) {
-        // Try to parse it if it's a JSON object (common with Pinia persistence)
-        try {
-             const parsed = JSON.parse(storedItem);
-             token = parsed.token || storedItem; // Use parsed.token if it exists, else the whole string
-        } catch (e) {
-             token = storedItem; // It wasn't JSON, use the string directly
-        }
-    }
-  }
-
-  // Final cleanup: remove quotes if they accidentally got wrapped
-  if (typeof token === 'string' && token.startsWith('"') && token.endsWith('"')) {
-      token = token.slice(1, -1);
-  }
-
+  const token = getToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-    console.log("Sending token:", token); // <-- Add this for debugging!
   } else {
-    console.error("No token found! The request will likely fail with 401.");
+    console.error('[ChatBot] 未找到有效 token，请确认已登录。当前 tokenStore.token =', tokenStore.token);
   }
-
   return config;
-}, error => {
-    return Promise.reject(error);
-});
+}, error => Promise.reject(error));
 
-// 1. 初始化拉取会话列表
+// 1. 拉取会话列表
 const fetchSessions = async () => {
   try {
     const res = await axiosInstance.get('/sessions');
@@ -96,15 +100,14 @@ const fetchSessions = async () => {
 // 2. 点击左侧会话：加载具体聊天记录
 const loadSession = async (sessionId: number) => {
   if (currentSessionId.value === sessionId) return;
-  
+
   currentSessionId.value = sessionId;
-  messages.value = []; // 清空当前屏幕
+  messages.value = [];
   isLoading.value = true;
-  
+
   try {
     const res = await axiosInstance.get(`/sessions/${sessionId}/messages`);
     if (res.data.code === 200) {
-      // 将后端返回的格式转换为前端显示的格式
       messages.value = res.data.data.map((m: any) => ({
         role: m.role,
         content: m.content
@@ -117,7 +120,7 @@ const loadSession = async (sessionId: number) => {
   }
 };
 
-// 3. 点击“新建对话”
+// 3. 新建对话
 const createNewChat = () => {
   currentSessionId.value = null;
   messages.value = [];
@@ -131,9 +134,8 @@ const sendMessage = async () => {
   messages.value.push({ content: currentMsg, role: "user" });
   userMessage.value = "";
   isLoading.value = true;
-  
+
   try {
-    // 【重要】我们不再发送庞大的 history 数组，只发送 message 和 currentSessionId
     const response = await axiosInstance.post('/chat', {
       message: currentMsg,
       session_id: currentSessionId.value
@@ -141,17 +143,11 @@ const sendMessage = async () => {
 
     if (response.data.code === 200) {
       const data = response.data.data;
-      messages.value.push({
-        content: data.reply,
-        role: "assistant",
-      });
-      
-      // 如果这是一个新对话，后端会返回新创建的 session_id
+      messages.value.push({ content: data.reply, role: "assistant" });
+
       if (!currentSessionId.value) {
         currentSessionId.value = data.session_id;
       }
-      
-      // 发送完消息后刷新左侧列表，确保标题和排序是最新的
       await fetchSessions();
     } else {
       snackbarStore.showErrorMessage(response.data.message);
@@ -165,12 +161,16 @@ const sendMessage = async () => {
 
 watch(() => messages.value, (val) => {
   if (val) {
-    scrollToBottom(document.querySelector(".message-container"));
+    nextTick(() => {
+      scrollToBottom(document.querySelector(".message-container"));
+    });
     const last = val[val.length - 1];
     if (last?.role === "assistant" && last.content) {
       try {
         const firstSentence = last.content.split(/(?<=[。！？\n.?!])\s*/)[0];
-        live2d.setMessageBox(firstSentence || last.content.slice(0, 50), 4000);
+        setTimeout(() => {
+          live2d.setMessageBox(firstSentence || last.content.slice(0, 50), 4000);
+        }, 100);
       } catch (e) {}
     }
   }
@@ -178,7 +178,7 @@ watch(() => messages.value, (val) => {
 
 const displayMessages = computed(() => {
   if (messages.value.length === 0) return [];
-  const messagesCopy = messages.value.slice(); 
+  const messagesCopy = messages.value.slice();
   const lastMessage = messagesCopy[messagesCopy.length - 1];
   messagesCopy[messagesCopy.length - 1] = {
     ...lastMessage,
@@ -199,19 +199,49 @@ const handleKeydown = (e: KeyboardEvent) => {
 
 const inputRow = ref(1);
 
+// ✅ 用轮询等待 token 就绪，而不是 watch(tokenStore.token)
+// watch 方案失败的原因：tokenStore.token 的值是字符串 "undefined"（不是 undefined），
+// 所以 watch 会立即触发（值非空），但 isValidToken 检查会拦住无效请求
+let tokenPollTimer: ReturnType<typeof setInterval> | null = null;
+
+const initSessionsWhenReady = () => {
+  if (getToken()) {
+    fetchSessions();
+    return;
+  }
+  let attempts = 0;
+  tokenPollTimer = setInterval(() => {
+    attempts++;
+    if (getToken()) {
+      fetchSessions();
+      clearInterval(tokenPollTimer!);
+      tokenPollTimer = null;
+    } else if (attempts >= 10) {
+      clearInterval(tokenPollTimer!);
+      tokenPollTimer = null;
+      console.warn('[ChatBot] 等待 token 超时，用户可能未登录');
+    }
+  }, 500);
+};
+
 onMounted(() => {
-  fetchSessions(); // 页面加载时拉取历史记录列表
+  initSessionsWhenReady();
   try {
     setTimeout(() => {
       live2d.setMessageBox("欢迎！左侧可以选择您的历史对话哦~", 4000);
-    }, 1000);
+    }, 1500);
   } catch (error) {}
 });
 
 onUnmounted(() => {
-  window.onresize = null; // 修复Live2D缩放报错
+  if (tokenPollTimer) {
+    clearInterval(tokenPollTimer);
+    tokenPollTimer = null;
+  }
+  window.onresize = null;
 });
 </script>
+
 
 <template>
   <div class="chat-bot-wrapper d-flex h-100">

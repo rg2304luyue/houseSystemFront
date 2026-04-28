@@ -94,7 +94,7 @@ export const useAuthStore = defineStore("auth", {
           //存储token到pinia
           // console.log( response.data.msg);
           const tokenStore = userTokenStore();
-          tokenStore.setToken(response.data.msg);
+          tokenStore.setToken(response.data.data.token);
           console.log("tokenStore", tokenStore.token);
           //存储用户信息到profilestore
                 // 2. 设置 token 到全局 axios headers
@@ -154,7 +154,7 @@ export const useAuthStore = defineStore("auth", {
           
           // 存储token到pinia
           const tokenStore = userTokenStore();
-          tokenStore.setToken(response.data.msg);
+          tokenStore.setToken(response.data.data.token);
           console.log("tokenStore", tokenStore.token);
           
           // 存储用户信息到profilestore
