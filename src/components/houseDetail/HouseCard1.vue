@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 // 定义props
 const props = defineProps<{
@@ -77,18 +77,29 @@ const selectedDate = ref(null);
 
 const onDateSelected = async (date: string | Date) => {
   console.log("选择的日期是：", date);
-  //showDatePicker.value = false; / 选择后隐藏日期选择器
 
-try {
+  // 从 localStorage 中取 token，解析出当前登录用户名
+  const token = localStorage.getItem('token');
+  let username = '';
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      username = payload.phone || payload.email || payload.user_id || '';
+    } catch (e) {
+      console.error('token解析失败', e);
+    }
+  }
+
+  try {
     const response = await fetch('http://localhost:5000/appointments', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        username: "aaaa",
+        username: username,           // ✅ 从token中取
         time: date.toISOString(),
-        property: "万科魅力之城武广新城" // 可以添加更多房产信息
+        property: props.house.title   // ✅ 从当前房源取
       })
     });
 
@@ -104,7 +115,6 @@ try {
     console.error('提交日期失败:', error);
     alert('提交日期失败，请稍后再试');
   }
-
 };
 
 </script>

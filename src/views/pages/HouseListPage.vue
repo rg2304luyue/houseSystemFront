@@ -63,9 +63,11 @@
         <v-col>
           <v-chip-group
             v-model="selectedRentRange"
+            mandatory
             selected-class="text-primary"
           >
-            <v-chip :value="null" label size="small" filter>不限</v-chip> <v-chip v-for="range in rentRanges" :key="range.label" :value="range.label" label size="small" filter>
+            <v-chip value="all" label size="small" filter>不限</v-chip>
+            <v-chip v-for="range in rentRanges" :key="range.label" :value="range.label" label size="small" filter>
               {{ range.label }}
             </v-chip>
           </v-chip-group>
@@ -408,13 +410,13 @@ const rentRanges = ref([
   { label: '≥6000元', value: { min: 6000, max: undefined } },
 ]);
 // For rent range chip group, null value represents "不限"
-const selectedRentRange = ref<string | null>(null);
+const selectedRentRange = ref<string>('all');
 const customMinPrice = ref<number | undefined>();
 const customMaxPrice = ref<number | undefined>();
 const orientations = ref(['东', '南', '西', '北', '南北', '东西', '东北', '西北', '东南', '西南']);
 
 watch(selectedRentRange, (newLabel) => {
-  if (newLabel) {
+  if (newLabel && newLabel !== 'all') {
     const range = rentRanges.value.find(r => r.label === newLabel);
     if (range) {
       searchFilters.min_price = range.value.min;
@@ -437,7 +439,7 @@ const applyCustomPriceRange = () => {
   }
   searchFilters.min_price = customMinPrice.value;
   searchFilters.max_price = customMaxPrice.value;
-  selectedRentRange.value = null; // Deselect preset range chip
+  selectedRentRange.value = 'all'; // Deselect preset range chip
   applyFiltersAndResetPage();
 }
 
@@ -505,7 +507,7 @@ const resetFilters = () => {
   searchFilters.community = '';
   searchFilters.region = [];
   searchFilters.rent_type = ''; // Reset to "不限"
-  selectedRentRange.value = null; // This will trigger watch to clear min/max price in searchFilters
+  selectedRentRange.value = 'all'; // This will trigger watch to clear min/max price in searchFilters
   customMinPrice.value = undefined;
   customMaxPrice.value = undefined;
   searchFilters.rooms = [];
