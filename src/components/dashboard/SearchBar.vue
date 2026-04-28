@@ -1,30 +1,22 @@
 <template>
-    <v-form>
-      <v-container >
-        <v-row >
-          <v-col cols="12">
-            <v-text-field
-            
-              v-model="message"
-              :append-icon="message ? 'mdi-send' : 'mdi-microphone'"
-              :append-inner-icon="marker ? 'mdi-map-marker' : 'mdi-map-marker-off'"
-              :prepend-icon="icon"
-              clear-icon="mdi-close-circle"
-              label="请输入区域开始找房~"
-              type="text"
-              variant="solo"
-              clearable
-              @click:append="sendMessage"
-              @click:append-inner="toggleMarker"
-              @click:clear="clearMessage"
-              @click:prepend="changeIcon"
-            ></v-text-field>
-            
-          </v-col>
-        </v-row>
-      </v-container>
-    </v-form>
-  </template>
+  <v-form @submit.prevent="sendMessage"> <v-container>
+      <v-row>
+        <v-col cols="12">
+          <v-text-field
+            v-model="message"
+            :append-icon="message ? 'mdi-send' : 'mdi-microphone'"
+            label="请输入区域或小区开始找房~"
+            variant="solo"
+            clearable
+            @click:append="sendMessage"
+            @click:clear="clearMessage"
+            @keydown.enter="sendMessage"
+          ></v-text-field>
+        </v-col>
+      </v-row>
+    </v-container>
+  </v-form>
+</template>
 
   <script setup lang="ts">
     import { computed, ref } from 'vue'
@@ -40,6 +32,7 @@
       'mdi-emoticon-tongue',
     ]
   
+    const emit = defineEmits(['search'])
     const message = ref('')
     const marker = ref(true)
     const iconIndex = ref(0)
@@ -52,15 +45,25 @@
     }
   
     function sendMessage () {
+      if (message.value.trim()) {
+        // 2. 将搜索内容发送出去
+        emit('search', message.value.trim())
+      }
       resetIcon()
-      clearMessage()
+      // 注意：不要在这里立即调用 clearMessage()，
+      // 否则父组件可能拿不到值，或者用户看不见自己搜了什么
     }
+
     function clearMessage () {
       message.value = ''
+      // 清空时也通知父组件重置搜索结果
+      emit('search', '')
     }
+
     function resetIcon () {
       iconIndex.value = 0
     }
+
     function changeIcon () {
       iconIndex.value === icons.length - 1
         ? iconIndex.value = 0

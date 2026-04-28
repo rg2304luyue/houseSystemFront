@@ -63,10 +63,9 @@
         <v-col>
           <v-chip-group
             v-model="selectedRentRange"
-            mandatory
             selected-class="text-primary"
           >
-            <v-chip :value="null" label size="small" filter>不限</v-chip> <v-chip v-for="range in rentRanges" :key="range.label" :value="range.value" label size="small" filter>
+            <v-chip :value="null" label size="small" filter>不限</v-chip> <v-chip v-for="range in rentRanges" :key="range.label" :value="range.label" label size="small" filter>
               {{ range.label }}
             </v-chip>
           </v-chip-group>
@@ -409,22 +408,25 @@ const rentRanges = ref([
   { label: '≥6000元', value: { min: 6000, max: undefined } },
 ]);
 // For rent range chip group, null value represents "不限"
-const selectedRentRange = ref<{min: number | undefined, max: number | undefined } | null>(null);
+const selectedRentRange = ref<string | null>(null);
 const customMinPrice = ref<number | undefined>();
 const customMaxPrice = ref<number | undefined>();
 const orientations = ref(['东', '南', '西', '北', '南北', '东西', '东北', '西北', '东南', '西南']);
 
-watch(selectedRentRange, (newRange) => {
-  if (newRange) {
-    searchFilters.min_price = newRange.min;
-    searchFilters.max_price = newRange.max;
-    customMinPrice.value = undefined; // Clear custom if preset is selected
-    customMaxPrice.value = undefined;
-  } else { // "不限" (null) selected
+watch(selectedRentRange, (newLabel) => {
+  if (newLabel) {
+    const range = rentRanges.value.find(r => r.label === newLabel);
+    if (range) {
+      searchFilters.min_price = range.value.min;
+      searchFilters.max_price = range.value.max;
+      customMinPrice.value = undefined;
+      customMaxPrice.value = undefined;
+    }
+  } else {
     searchFilters.min_price = undefined;
     searchFilters.max_price = undefined;
   }
-});
+}, { flush: 'sync' });  // flush:sync 确保价格在同一个 tick 内写入，发请求前一定能读到
 
 const applyCustomPriceRange = () => {
   // Basic validation for custom price
@@ -440,6 +442,7 @@ const applyCustomPriceRange = () => {
 }
 
 const loadHouses = async () => {
+  isLoadingInternal = true;
   loading.value = true;
   try {
     // Prepare API parameters from component's searchFilters state
@@ -481,11 +484,14 @@ const loadHouses = async () => {
     // snackbarStore.showErrorMessage('加载房源失败，请稍后再试');
   } finally {
     loading.value = false;
+    isLoadingInternal = false;
   }
 };
-// **新增/修改：使用 watch 来处理分页变化**
+
+// 改后：只有用户手动翻页才触发，loadHouses 内部同步 page 不触发
+let isLoadingInternal = false;
 watch(() => pagination.page, (newPage, oldPage) => {
-  if (newPage !== oldPage && !loading.value) { // 确保页码确实改变了，并且当前没有在加载中
+  if (newPage !== oldPage && !isLoadingInternal) {
     loadHouses();
   }
 });
