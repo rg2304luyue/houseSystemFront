@@ -1,26 +1,21 @@
-<!--
-* @Component:
-* @Maintainer: J.K. Yang
-* @Description:
--->
 <script setup lang="ts">
-//live2d对话
 import * as live2d from 'live2d-render';
-//头像获取
 import { useProfileStore } from "@/stores/profileStore";
 import { ref, reactive, computed, watch, onMounted } from 'vue';
-const profileStore = useProfileStore();
-const signon = reactive({ ...profileStore.signon });
+import axios from 'axios';
 
 import { useSnackbarStore } from "@/stores/snackbarStore";
 import AnimationChat from "@/components/animations/AnimationChat1.vue";
 import AnimationAi from "@/components/animations/AnimationBot1.vue";
-import { read, countAndCompleteCodeBlocks } from "@/utils/aiUtils";
+import { countAndCompleteCodeBlocks } from "@/utils/aiUtils"; // 移除了 read (不再需要流式读取)
 import { scrollToBottom } from "@/utils/common";
 import { MdPreview } from "md-editor-v3";
 import { useChatGPTStore } from "@/stores/chatGPTStore";
 import "md-editor-v3/lib/preview.css";
 import ApiKeyDialog from "@/components/ApiKeyDialog.vue";
+
+const profileStore = useProfileStore();
+const signon = reactive({ ...profileStore.signon });
 const snackbarStore = useSnackbarStore();
 const chatGPTStore = useChatGPTStore();
 
@@ -28,102 +23,67 @@ interface Message {
   content: string;
   role: "user" | "assistant" | "system";
 }
+
 // User Input Message
 const userMessage = ref("");
 
-// Prompt Message
-const promptMessage = computed(() => {
-  console.log("chatGPTStore.propmpt", chatGPTStore.propmpt);
-
-  return [
-    {
-      content: chatGPTStore.propmpt,
-      role: "system",
-    },
-  ];
-});
-
 // Message List
 const messages = ref<Message[]>([]);
-
-const requestMessages = computed(() => {
-  if (messages.value.length <= 10) {
-    return [...promptMessage.value, ...messages.value];
-  } else {
-    // 截取最新的10条信息
-    const slicedMessages = messages.value.slice(-10);
-    return [...promptMessage.value, ...slicedMessages];
-  }
-});
 
 const isLoading = ref(false);
 
 // Send Messsage
 const sendMessage = async () => {
-  if (userMessage.value) {
-    // Add the message to the list
+  if (userMessage.value.trim()) {
+    const currentMessage = userMessage.value;
+    
+    // 1. 将用户消息推入界面展示
     messages.value.push({
-      content: userMessage.value,
+      content: currentMessage,
       role: "user",
     });
 
-    // Clear the input
+    // 2. 清空输入框
     userMessage.value = "";
 
-    // Create a completion
-    await createCompletion();
+    // 3. 调用后端 Agent 接口
+    await createCompletion(currentMessage);
   }
 };
 
-const createCompletion = async () => {
-  // Check if the API key is set
-  // if (!chatGPTStore.getApiKey) {
-  //   snackbarStore.showErrorMessage("请先输入API KEY");
-  //   return;
-  // }
-
-  const proxyUrl = chatGPTStore.proxyUrl
-    ? chatGPTStore.proxyUrl
-    : "https://api.openai-proxy.com";
+const createCompletion = async (currentMessage: string) => {
+  isLoading.value = true;
+  
   try {
-    // Create a completion (axios is not used here because it does not support streaming)
-    const completion = await fetch(`${proxyUrl}/v1/chat/completions`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${chatGPTStore.getApiKey}`,
-      },
-      method: "POST",
-      body: JSON.stringify({
-        messages: requestMessages.value,
-        model: chatGPTStore.model,
-        stream: true,
-      }),
+    // 构造历史记录（排除刚才推入的最新一条用户消息，因为它作为 message 参数单发）
+    // 为了防止报文过大，这里限制最多携带历史前 10 条
+    const history = messages.value
+      .slice(-11, -1) 
+      .map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+    // 请求后端我们自己写的 Agent 接口
+    const response = await axios.post('http://localhost:5000/chat-ai/chat', {
+      message: currentMessage,
+      history: history
     });
 
-    // Handle errors
-    if (!completion.ok) {
-      const errorData = await completion.json();
-      snackbarStore.showErrorMessage(errorData.error.message);
-
-      return;
+    if (response.data.code === 200) {
+      // 获取到 AI 回复，推入消息列表
+      messages.value.push({
+        content: response.data.data.reply,
+        role: "assistant",
+      });
+    } else {
+      snackbarStore.showErrorMessage(response.data.message || "请求失败");
     }
-
-    // Create a reader
-    const reader = completion.body?.getReader();
-    if (!reader) {
-      snackbarStore.showErrorMessage("Cannot read the stream.");
-    }
-
-    // Add the bot message
-    messages.value.push({
-      content: "",
-      role: "assistant",
-    });
-
-    // Read the stream
-    read(reader, messages);
-  } catch (error) {
-    snackbarStore.showErrorMessage(error.message);
+  } catch (error: any) {
+    console.error("AI 接口调用失败:", error);
+    snackbarStore.showErrorMessage("网络异常或服务器出错，请稍后再试");
+  } finally {
+    isLoading.value = false;
   }
 };
 
@@ -134,10 +94,9 @@ watch(
       scrollToBottom(document.querySelector(".message-container"));
       // 找到最后一条消息
       const last = val[val.length - 1];
-      // 如果是 AI 回复
+      // 如果是 AI 回复，联动 Live2D
       if (last?.role === "assistant" && last.content) {
         try {
-          // 提取第一句话（或最多50个字）
           const firstSentence = last.content.split(/(?<=[。！？\n.?!])\s*/)[0] || last.content.slice(0, 50);
           live2d.setMessageBox(firstSentence, 4000);
         } catch (error) {
@@ -152,7 +111,8 @@ watch(
 );
 
 const displayMessages = computed(() => {
-  const messagesCopy = messages.value.slice(); // 创建原始数组的副本
+  if (messages.value.length === 0) return [];
+  const messagesCopy = messages.value.slice(); 
   const lastMessage = messagesCopy[messagesCopy.length - 1];
   const updatedLastMessage = {
     ...lastMessage,
@@ -162,24 +122,22 @@ const displayMessages = computed(() => {
   return messagesCopy;
 });
 
-const handleKeydown = (e) => {
+const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === "Enter" && (e.altKey || e.shiftKey)) {
-    // 当同时按下 alt或者shift 和 enter 时，插入一个换行符
     e.preventDefault();
     userMessage.value += "\n";
   } else if (e.key === "Enter") {
-    // 当只按下 enter 时，发送消息
     e.preventDefault();
     sendMessage();
   }
 };
 
 const inputRow = ref(1);
+
 onMounted(() => {
   try {
-    // 添加延迟确保 DOM 完全渲染
     setTimeout(() => {
-      live2d.setMessageBox("欢迎欢迎~有什么需要帮助的吗", 4000);
+      live2d.setMessageBox("欢迎欢迎~我是您的专属房产助理，想看什么房子呢？", 4000);
     }, 1000);
   } catch (error) {
     console.warn('Live2D initialization failed:', error);
@@ -191,16 +149,16 @@ onMounted(() => {
   <div class="chat-bot">
     <div class="messsage-area">
       <perfect-scrollbar v-if="messages.length > 0" class="message-container">
-        <template v-for="message in displayMessages">
+        <template v-for="(message, index) in displayMessages" :key="index">
           <div v-if="message.role === 'user'">
             <div class="pa-4 user-message">
               <v-avatar class="ml-4" rounded="sm" variant="elevated">
-                <img :src="signon.avatarUrl" alt="alt" />
+                <img :src="signon.avatarUrl" alt="user" />
               </v-avatar>
               <v-card class="gradient gray text-pre-wrap" theme="dark">
                 <v-card-text>
-                  <b> {{ message.content }}</b></v-card-text
-                >
+                  <b> {{ message.content }}</b>
+                </v-card-text>
               </v-card>
             </div>
           </div>
@@ -213,7 +171,7 @@ onMounted(() => {
               >
                 <img
                   src="@/assets/images/avatars/avatar_assistant.jpg"
-                  alt="alt"
+                  alt="bot"
                 />
               </v-avatar>
               <v-card>
@@ -234,7 +192,7 @@ onMounted(() => {
       </perfect-scrollbar>
       <div class="no-message-container" v-else>
         <h1 class="text-h4 text-md-h2 text-primary font-weight-bold">
-          Chat With Me
+          智能房产推荐
         </h1>
         <AnimationChat :size="300" />
       </div>
@@ -255,7 +213,7 @@ onMounted(() => {
           <v-tooltip
             activator="parent"
             location="top"
-            text="ChatGPT Config"
+            text="系统设置"
           ></v-tooltip>
         </v-btn>
         <transition name="fade">
@@ -267,17 +225,18 @@ onMounted(() => {
             variant="solo"
             ref="input"
             v-model="userMessage"
-            placeholder="Ask Anything"
+            placeholder="例如：帮我找一套雨花区1500以内的房子"
             hide-details
             @keydown="handleKeydown"
             :rows="inputRow"
             @focus="inputRow = 3"
             @blur="inputRow = 1"
+            :disabled="isLoading"
           >
           </v-textarea>
         </transition>
 
-        <v-btn class="mb-1" color="primary" variant="elevated" icon>
+        <v-btn class="mb-1" color="primary" variant="elevated" icon :disabled="isLoading">
           <v-icon @click="sendMessage">mdi-send</v-icon>
         </v-btn>
       </v-sheet>
@@ -287,6 +246,7 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
+/* 这里的样式不需要变动，保留你原有的 CSS 即可 */
 .chat-bot {
   background-repeat: repeat;
   height: 100%;
