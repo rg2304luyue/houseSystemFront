@@ -272,15 +272,49 @@ watch(() => messages.value, (val) => {
   }
 }, { deep: true });
 
+// 安全兜底：过滤可能的思考过程残留（后端 primary filter 已经跳过 ToolMessage 和 tool_calls）
+// 这里只处理极端情况下可能泄露的 JSON 块和 Final Answer 标记
+const filterThinkingContent = (text: string): string => {
+  if (!text) return '';
+
+  // 如果包含 Final Answer 标记，只取其后内容
+  const faIdx = text.indexOf('Final Answer:') !== -1
+    ? text.indexOf('Final Answer:')
+    : text.indexOf('Final Answer：');
+  if (faIdx !== -1) {
+    const marker = text.indexOf('Final Answer:') !== -1 ? 'Final Answer:' : 'Final Answer：';
+    return text.slice(faIdx + marker.length).trim();
+  }
+
+  // 移除工具调用返回的 JSON 块（安全兜底）
+  // 匹配 {"key": ...} 格式，只删除明显的 JSON，不影响正常回复中的引号
+  let cleaned = text;
+  const jsonBlock = /\{\s*"[^"]+"\s*:\s*[\[{"].*?\}\s*\}/gs;
+  const before = cleaned;
+  cleaned = cleaned.replace(jsonBlock, '');
+  // 如果删除 JSON 后只剩空白，返回空让下方兜底
+  if (before !== cleaned && cleaned.trim() === '') {
+    return '';
+  }
+
+  return cleaned.trim();
+};
+
 const displayMessages = computed(() => {
   if (messages.value.length === 0) return [];
-  const messagesCopy = messages.value.slice();
-  const lastMessage = messagesCopy[messagesCopy.length - 1];
-  messagesCopy[messagesCopy.length - 1] = {
-    ...lastMessage,
-    content: countAndCompleteCodeBlocks(lastMessage.content),
-  };
-  return messagesCopy;
+
+  return messages.value.map(msg => {
+    let content = msg.content;
+
+    if (msg.role === 'assistant') {
+      content = filterThinkingContent(content);
+    }
+
+    return {
+      ...msg,
+      content: countAndCompleteCodeBlocks(content),
+    };
+  });
 });
 
 const handleKeydown = (e: KeyboardEvent) => {

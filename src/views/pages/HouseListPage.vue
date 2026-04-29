@@ -63,8 +63,8 @@
         <v-col>
           <v-chip-group
             v-model="selectedRentRange"
-            mandatory
             selected-class="text-primary"
+            @update:model-value="onRentRangeChange"
           >
             <v-chip value="all" label size="small" filter>不限</v-chip>
             <v-chip v-for="range in rentRanges" :key="range.label" :value="range.label" label size="small" filter>
@@ -415,9 +415,11 @@ const customMinPrice = ref<number | undefined>();
 const customMaxPrice = ref<number | undefined>();
 const orientations = ref(['东', '南', '西', '北', '南北', '东西', '东北', '西北', '东南', '西南']);
 
-watch(selectedRentRange, (newLabel) => {
-  if (newLabel && newLabel !== 'all') {
-    const range = rentRanges.value.find(r => r.label === newLabel);
+// 通过 @update:model-value 事件同步租金范围
+// 去掉 mandatory 避免 Vuetify 重渲染时内部强制重置选项
+const onRentRangeChange = (label: string | undefined) => {
+  if (label && label !== 'all') {
+    const range = rentRanges.value.find(r => r.label === label);
     if (range) {
       searchFilters.min_price = range.value.min;
       searchFilters.max_price = range.value.max;
@@ -425,10 +427,11 @@ watch(selectedRentRange, (newLabel) => {
       customMaxPrice.value = undefined;
     }
   } else {
+    // 用户点击"不限"或取消选择 → 清除价格筛选
     searchFilters.min_price = undefined;
     searchFilters.max_price = undefined;
   }
-}, { flush: 'sync' });  // flush:sync 确保价格在同一个 tick 内写入，发请求前一定能读到
+};
 
 const applyCustomPriceRange = () => {
   // Basic validation for custom price
@@ -531,11 +534,6 @@ const goToHouseDetail = (houseId: number) => {
   router.push(`/house/${houseId}`); // Ensure this route is defined in your router
 };
 
-onMounted(async () => {
-  await loadHouses();
-  console.log("Houses data after initial load:", houses.value);
-});
-
 // 添加热门推荐房源的接口类型
 interface RecommendedHouse {
   id: number;
@@ -573,7 +571,6 @@ const fetchRecommendedHouse = async () => {
   }
 };
 
-// 在 onMounted 中调用
 onMounted(async () => {
   await Promise.all([loadHouses(), fetchRecommendedHouse()]);
   console.log("Houses data after initial load:", houses.value);
