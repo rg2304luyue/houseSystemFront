@@ -23,6 +23,7 @@ const chatGPTStore = useChatGPTStore();
 interface Message {
   content: string;
   role: "user" | "assistant" | "system";
+  streaming?: boolean; // 标记是否正在流式输出
 }
 
 interface Session {
@@ -31,86 +32,76 @@ interface Session {
   updated_at: string;
 }
 
-// 核心状态管理
+// 核心状态
 const userMessage = ref("");
 const messages = ref<Message[]>([]);
 const isLoading = ref(false);
 
-// 新增：会话管理状态
+// 会话管理
 const sessionList = ref<Session[]>([]);
 const currentSessionId = ref<number | null>(null);
 const drawer = ref(true);
 
-const axiosInstance = axios.create({
-  baseURL: 'http://localhost:5000/chat-ai'
-});
+// 流式控制
+const abortController = ref<AbortController | null>(null);
 
+const BASE_URL = 'http://localhost:5000/chat-ai';
 
+const axiosInstance = axios.create({ baseURL: BASE_URL });
+
+// ============================================================
+// Token 工具
+// ============================================================
 const isValidToken = (val: any): val is string => {
-  return typeof val === 'string'
-    && val.length > 10
-    && val !== 'undefined'
-    && val !== 'null'
-    && val !== '';
+  return typeof val === 'string' && val.length > 10
+    && val !== 'undefined' && val !== 'null' && val !== '';
 };
 
 const getToken = (): string | null => {
-  // 1. tokenStore.token 直接同步自 localStorage['token']，先试
   if (isValidToken(tokenStore.token)) return tokenStore.token;
-
-  // 2. 直接读 localStorage，逐个 key 尝试
   for (const key of ['token', 'accessToken', 'userToken']) {
     const raw = localStorage.getItem(key);
     if (!raw) continue;
     if (isValidToken(raw)) return raw;
-    // 尝试 JSON 解析（Pinia persist 有时整体序列化）
     try {
       const parsed = JSON.parse(raw);
       const candidate = parsed?.token ?? parsed?.accessToken ?? parsed?.value;
       if (isValidToken(candidate)) return candidate;
     } catch {}
   }
-
   return null;
 };
 
-// 请求拦截器：每次请求自动带 token
 axiosInstance.interceptors.request.use(config => {
   const token = getToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  } else {
-    console.error('[ChatBot] 未找到有效 token，请确认已登录。当前 tokenStore.token =', tokenStore.token);
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 }, error => Promise.reject(error));
 
-// 1. 拉取会话列表
+// ============================================================
+// 会话管理
+// ============================================================
 const fetchSessions = async () => {
   try {
     const res = await axiosInstance.get('/sessions');
-    if (res.data.code === 200) {
-      sessionList.value = res.data.data;
-    }
+    if (res.data.code === 200) sessionList.value = res.data.data;
   } catch (error) {
     console.error("拉取会话列表失败", error);
   }
 };
 
-// 2. 点击左侧会话：加载具体聊天记录
 const loadSession = async (sessionId: number) => {
   if (currentSessionId.value === sessionId) return;
-
   currentSessionId.value = sessionId;
   messages.value = [];
   isLoading.value = true;
-
   try {
     const res = await axiosInstance.get(`/sessions/${sessionId}/messages`);
     if (res.data.code === 200) {
       messages.value = res.data.data.map((m: any) => ({
         role: m.role,
-        content: m.content
+        content: m.content,
+        streaming: false
       }));
     }
   } catch (error) {
@@ -120,52 +111,157 @@ const loadSession = async (sessionId: number) => {
   }
 };
 
-// 3. 新建对话
 const createNewChat = () => {
   currentSessionId.value = null;
   messages.value = [];
 };
 
-// 4. 发送消息
+// ============================================================
+// 核心：流式发送消息
+// ============================================================
 const sendMessage = async () => {
   if (!userMessage.value.trim() || isLoading.value) return;
 
   const currentMsg = userMessage.value;
-  messages.value.push({ content: currentMsg, role: "user" });
+  messages.value.push({ content: currentMsg, role: "user", streaming: false });
   userMessage.value = "";
   isLoading.value = true;
 
+  // 添加一条空的 assistant 消息，用于实时填充流式内容
+  const assistantMsgIndex = messages.value.length;
+  messages.value.push({ content: "", role: "assistant", streaming: true });
+
+  // 终止上一个请求（如果有）
+  if (abortController.value) abortController.value.abort();
+  abortController.value = new AbortController();
+
+  const token = getToken();
+
   try {
-    const response = await axiosInstance.post('/chat', {
-      message: currentMsg,
-      session_id: currentSessionId.value
+    // 使用 fetch API 实现 SSE 流式读取
+    const response = await fetch(`${BASE_URL}/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'text/event-stream',
+      },
+      body: JSON.stringify({
+        message: currentMsg,
+        session_id: currentSessionId.value
+      }),
+      signal: abortController.value.signal
     });
 
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // 按 SSE 格式解析（每条消息以 \n\n 结尾）
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || ''; // 未完成的部分留到下次
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const jsonStr = line.slice(6).trim();
+        if (!jsonStr) continue;
+
+        try {
+          const data = JSON.parse(jsonStr);
+
+          if (data.type === 'chunk') {
+            // 实时追加内容
+            messages.value[assistantMsgIndex].content += data.content;
+            await nextTick();
+            scrollToBottom(document.querySelector(".message-container"));
+
+          } else if (data.type === 'done') {
+            // 流式结束
+            messages.value[assistantMsgIndex].streaming = false;
+            if (!currentSessionId.value && data.session_id) {
+              currentSessionId.value = data.session_id;
+            }
+            await fetchSessions();
+
+          } else if (data.type === 'error') {
+            messages.value[assistantMsgIndex].content += `\n\n[错误: ${data.message}]`;
+            messages.value[assistantMsgIndex].streaming = false;
+          }
+        } catch (e) {
+          console.warn('SSE JSON 解析失败:', jsonStr);
+        }
+      }
+    }
+
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      // 用户主动取消
+      messages.value[assistantMsgIndex].content += '\n\n[已停止生成]';
+    } else {
+      console.error('流式请求失败:', error);
+      // 降级到普通请求
+      await sendMessageFallback(currentMsg, assistantMsgIndex);
+      return;
+    }
+    messages.value[assistantMsgIndex].streaming = false;
+  } finally {
+    isLoading.value = false;
+    abortController.value = null;
+  }
+};
+
+// 降级：普通非流式请求（当流式失败时使用）
+const sendMessageFallback = async (msg: string, assistantMsgIndex: number) => {
+  try {
+    const response = await axiosInstance.post('/chat', {
+      message: msg,
+      session_id: currentSessionId.value
+    });
     if (response.data.code === 200) {
       const data = response.data.data;
-      messages.value.push({ content: data.reply, role: "assistant" });
-
-      if (!currentSessionId.value) {
-        currentSessionId.value = data.session_id;
-      }
+      messages.value[assistantMsgIndex].content = data.reply;
+      if (!currentSessionId.value) currentSessionId.value = data.session_id;
       await fetchSessions();
     } else {
-      snackbarStore.showErrorMessage(response.data.message);
+      messages.value[assistantMsgIndex].content = "抱歉，请求失败，请稍后重试。";
     }
-  } catch (error: any) {
-    snackbarStore.showErrorMessage("网络异常，请稍后再试");
+  } catch (e) {
+    messages.value[assistantMsgIndex].content = "网络异常，请检查连接后重试。";
   } finally {
+    messages.value[assistantMsgIndex].streaming = false;
     isLoading.value = false;
   }
 };
 
+// 停止生成
+const stopGeneration = () => {
+  if (abortController.value) {
+    abortController.value.abort();
+    abortController.value = null;
+  }
+};
+
+// ============================================================
+// 监听滚动 + live2d 联动
+// ============================================================
 watch(() => messages.value, (val) => {
   if (val) {
     nextTick(() => {
       scrollToBottom(document.querySelector(".message-container"));
     });
     const last = val[val.length - 1];
-    if (last?.role === "assistant" && last.content) {
+    // 只在完整消息出来后触发 live2d（不在流式过程中）
+    if (last?.role === "assistant" && last.content && !last.streaming) {
       try {
         const firstSentence = last.content.split(/(?<=[。！？\n.?!])\s*/)[0];
         setTimeout(() => {
@@ -199,16 +295,13 @@ const handleKeydown = (e: KeyboardEvent) => {
 
 const inputRow = ref(1);
 
-// ✅ 用轮询等待 token 就绪，而不是 watch(tokenStore.token)
-// watch 方案失败的原因：tokenStore.token 的值是字符串 "undefined"（不是 undefined），
-// 所以 watch 会立即触发（值非空），但 isValidToken 检查会拦住无效请求
+// ============================================================
+// 生命周期
+// ============================================================
 let tokenPollTimer: ReturnType<typeof setInterval> | null = null;
 
 const initSessionsWhenReady = () => {
-  if (getToken()) {
-    fetchSessions();
-    return;
-  }
+  if (getToken()) { fetchSessions(); return; }
   let attempts = 0;
   tokenPollTimer = setInterval(() => {
     attempts++;
@@ -219,7 +312,6 @@ const initSessionsWhenReady = () => {
     } else if (attempts >= 10) {
       clearInterval(tokenPollTimer!);
       tokenPollTimer = null;
-      console.warn('[ChatBot] 等待 token 超时，用户可能未登录');
     }
   }, 500);
 };
@@ -234,10 +326,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  if (tokenPollTimer) {
-    clearInterval(tokenPollTimer);
-    tokenPollTimer = null;
-  }
+  if (tokenPollTimer) clearInterval(tokenPollTimer);
+  if (abortController.value) abortController.value.abort();
   window.onresize = null;
 });
 </script>
@@ -246,6 +336,7 @@ onUnmounted(() => {
 <template>
   <div class="chat-bot-wrapper d-flex h-100">
     
+    <!-- 左侧历史会话栏 -->
     <v-navigation-drawer 
       v-model="drawer"
       permanent
@@ -289,10 +380,13 @@ onUnmounted(() => {
       </v-list>
     </v-navigation-drawer>
 
+    <!-- 右侧聊天区 -->
     <div class="chat-bot flex-grow-1 position-relative">
       <div class="messsage-area">
         <perfect-scrollbar v-if="messages.length > 0" class="message-container">
           <template v-for="(message, index) in displayMessages" :key="index">
+            
+            <!-- 用户消息 -->
             <div v-if="message.role === 'user'" class="pa-4 user-message">
               <v-avatar class="ml-4" rounded="sm" variant="elevated">
                 <img :src="signon.avatarUrl" alt="user" />
@@ -301,17 +395,28 @@ onUnmounted(() => {
                 <v-card-text><b>{{ message.content }}</b></v-card-text>
               </v-card>
             </div>
+
+            <!-- AI 消息 -->
             <div v-else class="pa-2 pa-md-5 assistant-message">
               <v-avatar class="d-none d-md-block mr-2 mr-md-4" rounded="sm" variant="elevated">
                 <img src="@/assets/images/avatars/avatar_assistant.jpg" alt="bot" />
               </v-avatar>
-              <v-card>
-                <md-preview :modelValue="message.content" class="font-1" />
-              </v-card>
+              <div class="assistant-content-wrapper">
+                <v-card>
+                  <!-- 正在流式输出时显示内容 + 光标动画 -->
+                  <div v-if="message.streaming" class="streaming-wrapper">
+                    <md-preview :modelValue="message.content" class="font-1" />
+                    <span class="streaming-cursor">▋</span>
+                  </div>
+                  <!-- 完成后正常渲染 -->
+                  <md-preview v-else :modelValue="message.content" class="font-1" />
+                </v-card>
+              </div>
             </div>
           </template>
           
-          <div v-if="isLoading" class="pa-6">
+          <!-- 加载动画（等待第一个 chunk 到来前） -->
+          <div v-if="isLoading && messages[messages.length - 1]?.content === ''" class="pa-6">
             <div class="message"><AnimationAi :size="100" /></div>
           </div>
         </perfect-scrollbar>
@@ -322,6 +427,7 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- 输入区 -->
       <div class="input-area">
         <v-sheet color="transparent" elevation="0" class="input-panel d-flex align-end pa-1">
           <v-btn class="mb-1 mr-2 d-md-none" variant="elevated" icon @click="drawer = !drawer">
@@ -339,8 +445,19 @@ onUnmounted(() => {
             @focus="inputRow = 3" @blur="inputRow = 1" :disabled="isLoading"
           ></v-textarea>
 
-          <v-btn class="mb-1" color="primary" variant="elevated" icon :disabled="isLoading" @click="sendMessage">
+          <!-- 发送/停止 按钮切换 -->
+          <v-btn
+            v-if="!isLoading"
+            class="mb-1" color="primary" variant="elevated" icon @click="sendMessage"
+          >
             <v-icon>mdi-send</v-icon>
+          </v-btn>
+          <v-btn
+            v-else
+            class="mb-1" color="error" variant="elevated" icon @click="stopGeneration"
+            title="停止生成"
+          >
+            <v-icon>mdi-stop</v-icon>
           </v-btn>
         </v-sheet>
         <ApiKeyDialog />
@@ -350,7 +467,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped lang="scss">
-/* 在原来基础上新增了一层 wrapper 确保 flex 布局正常 */
 .chat-bot-wrapper {
   overflow: hidden;
 }
@@ -377,7 +493,7 @@ onUnmounted(() => {
       border-radius: 5px;
       max-width: 1200px;
       margin: 0 auto;
-      background: rgba(255, 255, 255, 0.9); /* 防止输入框被字挡住 */
+      background: rgba(255, 255, 255, 0.9);
       backdrop-filter: blur(10px);
     }
   }
@@ -397,6 +513,11 @@ onUnmounted(() => {
   flex-direction: row;
 }
 
+.assistant-content-wrapper {
+  flex: 1;
+  max-width: calc(100% - 60px);
+}
+
 .message {
   margin: 0 auto;
   max-width: 1200px;
@@ -405,7 +526,7 @@ onUnmounted(() => {
 
 .message-container {
   height: calc(100vh - 154px);
-  padding-bottom: 80px; /* 防止最后一条消息被输入框遮挡 */
+  padding-bottom: 80px;
 }
 
 .no-message-container {
@@ -419,6 +540,28 @@ onUnmounted(() => {
     font-size: 2rem;
     font-weight: 500;
   }
+}
+
+// 流式输出容器
+.streaming-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+// 流式光标动画
+.streaming-cursor {
+  display: inline-block;
+  color: rgb(var(--v-theme-primary));
+  font-weight: bold;
+  animation: blink 0.8s step-end infinite;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 :deep(.md-editor-preview-wrapper) {
