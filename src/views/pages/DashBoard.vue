@@ -20,13 +20,41 @@ const fixCardStore = useFixCardStore()
 const color = ref('indigo')
 const variant = ref('tonal')
 
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const paymentSnackbar = ref(false)
+const paymentMessage = ref('')
+
 onMounted(() => {
   console.log("Dashboard mounted");
+
+  const paymentStatus = route.query.payment
+  if (paymentStatus === 'success') {
+    paymentMessage.value = '支付成功！您的合同已生效。'
+    paymentSnackbar.value = true
+  } else if (paymentStatus === 'failure') {
+    paymentMessage.value = '支付验证失败，请联系客服。'
+    paymentSnackbar.value = true
+  }
 });
 </script>
 
 <template>
   <div class="pa-5">
+    <!-- 支付结果提示 -->
+    <v-snackbar
+      v-model="paymentSnackbar"
+      :color="paymentMessage.includes('成功') ? 'success' : 'error'"
+      timeout="5000"
+      location="top"
+    >
+      {{ paymentMessage }}
+      <template #actions>
+        <v-btn variant="text" @click="paymentSnackbar = false">关闭</v-btn>
+      </template>
+    </v-snackbar>
+
     <!-- 顶端放新闻组件 -->
     
     <!-- BannerPage -->

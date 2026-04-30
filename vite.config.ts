@@ -68,6 +68,9 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    port: 4399,
+  },
   css: {
     preprocessorOptions: {
       scss: { charset: false },

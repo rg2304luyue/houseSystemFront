@@ -18,7 +18,7 @@
       <p>出租方（以下简称甲方）：{{ landlordName || '______' }}</p>
         <p>联系电话：{{ landlordPhone || '______' }}</p>
         <p>承租方（以下简称乙方）：{{ username || '______' }}</p>
-        
+
         <p>根据《中华人民共和国民法典》及相关法律法规的规定，甲乙双方在平等、自愿、公平、诚实信用的基础上，就乙方租赁甲方房屋事宜达成如下协议：</p>
 
         <p><strong>一、房屋基本情况</strong></p>
@@ -28,7 +28,7 @@
         <p><strong>二、房屋用途</strong></p>
         <p>该房屋用途为 {{ purpose || '______' }}。未经甲方书面同意，乙方不得擅自改变房屋用途。</p>
 
-            <v-radio-group 
+            <v-radio-group
                 v-model="purpose"
                 label="请选择房屋用途"
                 class="mt-4"
@@ -53,7 +53,7 @@
         <p>乙方保证在租赁期间内，按照约定用途合理使用房屋，不得利用房屋从事违法违规活动。</p>
 
         <p><strong>三、租赁期限</strong></p>
-        
+
            <p>租赁期限自 {{ formattedStartDate || '______' }} 起至 {{ formattedEndDate || '______' }} 止。</p>
 
                 <!-- 开始日期选择器 -->
@@ -150,9 +150,9 @@
 
 
      <v-card-actions>
-      <v-btn 
-        color="primary" 
-        block 
+      <v-btn
+        color="primary"
+        block
         size="large"
         @click="submitContract"
         :loading="isSubmitting"
@@ -193,14 +193,14 @@ const isSubmitting = ref(false)
 const submitContract = async () => {
   try {
     isSubmitting.value = true
-    
+
     // 准备完整的数据对象
     const payload = {
       rentValue: rentValue.value,
       purpose: purpose.value,
       startDate: startDate.value,
       endDate: endDate.value,
-      landlordName: formData.value.landlordName || '', // 确保包含所有必填字段
+      landlordName: formData.value.landlordName || '',
       landlordId: formData.value.landlordId || '',
       landlordPhone: formData.value.landlordPhone || '',
       tenantName: formData.value.tenantName || '',
@@ -208,7 +208,7 @@ const submitContract = async () => {
       tenantPhone: formData.value.tenantPhone || '',
       formattedRent: formatCurrency(rentValue.value),
       currentDate: new Date().toISOString().split('T')[0],
-      houseid: houseid.value, // 新增房源ID
+      houseid: houseid.value,
     }
 
     const response = await fetch('http://localhost:5000/contracts', {
@@ -220,17 +220,42 @@ const submitContract = async () => {
     })
 
     if (!response.ok) {
-      const errorData = await response.json() // 获取后端返回的错误详情
+      const errorData = await response.json()
       throw new Error(errorData.message || '提交失败')
     }
 
     const result = await response.json()
-    console.log('提交成功:', result)
-    alert('合同提交成功！')
-    
+    console.log('合同提交成功:', result)
+
+    // 获取支付链接并跳转支付宝沙箱
+    const contractId = result.data.id
+    const totalAmount = parseFloat(rentValue.value).toFixed(2)
+
+    const payResponse = await fetch('http://localhost:5000/api/alipay/pay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        out_trade_no: `CONTRACT_${contractId}_${Date.now()}`,
+        total_amount: totalAmount,
+        subject: `租房合同支付-${landlordName.value || '房东'}`
+      })
+    })
+
+    if (!payResponse.ok) {
+      throw new Error('获取支付链接失败')
+    }
+
+    const payResult = await payResponse.json()
+
+    if (payResult.success && payResult.data.pay_url) {
+      window.location.href = payResult.data.pay_url
+    } else {
+      throw new Error(payResult.message || '获取支付链接失败')
+    }
+
   } catch (error) {
     console.error('提交错误:', error)
-    alert(`提交失败: ${error.message}`) // 显示具体错误信息
+    alert(`提交失败: ${error.message}`)
   } finally {
     isSubmitting.value = false
   }
@@ -240,7 +265,7 @@ const route = useRoute()
 const rentValue = ref('')
 const landlordName = ref('')
 const landlordPhone = ref('')
-const houseid = ref('') // 新增房源ID变量
+const houseid = ref('')
 
 // 从路由参数获取租金
 onMounted(() => {
@@ -248,12 +273,12 @@ onMounted(() => {
   landlordName.value = route.query.landlord?.toString() || ''
   landlordPhone.value = route.query.phone?.toString() || ''
   houseid.value = route.query.houseid?.toString() || ''
-  console.log('Received houseid:', houseid.value) // 调试输出
+  console.log('Received houseid:', houseid.value)
 
   // 自动填充到表单数据中
   formData.value.landlordName = landlordName.value
   formData.value.landlordPhone = landlordPhone.value
-  formData.value.landlordId = houseid.value // 新增房源ID
+  formData.value.landlordId = houseid.value
 })
 
 // 数字转中文大写
@@ -261,17 +286,17 @@ const formatCurrency = (numStr: string) => {
   if (!numStr) return ''
   const num = parseFloat(numStr)
   if (isNaN(num)) return ''
-  
+
   const digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖']
   const units = ['', '拾', '佰', '仟', '万', '拾', '佰', '仟', '亿']
   let result = ''
-  
+
   const numStrArr = Math.floor(num).toString().split('').reverse()
-  
+
   numStrArr.forEach((n, i) => {
     result = digits[parseInt(n)] + units[i] + result
   })
-  
+
   return result + '元整'
 }
 

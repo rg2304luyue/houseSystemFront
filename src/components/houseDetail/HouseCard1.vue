@@ -55,7 +55,7 @@ const houseId = route.params.id
 const navigateToContract = () => {
   router.push({
     path: '/contract',
-    query: { rent: form.value.price ,
+    query: { rent: props.house.price ,
             landlord: props.house.landlord,
             phone: props.house.phone_num,
             houseid: houseId 

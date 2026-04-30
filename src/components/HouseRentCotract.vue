@@ -174,9 +174,34 @@ const submitContract = async () => {
     }
 
     const result = await response.json()
-    console.log('提交成功:', result)
-    alert('合同提交成功！')
-    
+    console.log('合同提交成功:', result)
+
+    // 获取支付链接并跳转支付宝沙箱
+    const contractId = result.data.id
+    const totalAmount = parseFloat(rentValue.value || props.property.rentValue).toFixed(2)
+
+    const payResponse = await fetch('http://localhost:5000/api/alipay/pay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        out_trade_no: `CONTRACT_${contractId}_${Date.now()}`,
+        total_amount: totalAmount,
+        subject: `租房合同支付-${props.property.landlord_username || '房东'}`
+      })
+    })
+
+    if (!payResponse.ok) {
+      throw new Error('获取支付链接失败')
+    }
+
+    const payResult = await payResponse.json()
+
+    if (payResult.success && payResult.data.pay_url) {
+      window.location.href = payResult.data.pay_url
+    } else {
+      throw new Error(payResult.message || '获取支付链接失败')
+    }
+
   } catch (error) {
     console.error('提交错误:', error)
     alert(`提交失败: ${error.message}`)

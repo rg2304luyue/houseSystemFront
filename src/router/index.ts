@@ -6,7 +6,7 @@ import AuthRoutes from "./auth.routes";
 export const routes = [
   {
     path: "/",
-    redirect: "/dashboard",
+    redirect: (to: any) => ({ path: "/dashboard", query: to.query }),
     meta: {},
   } as any,
   {
@@ -235,6 +235,14 @@ export const routes = [
         layout: "landing",
       },
       component: () => import("@/views/pages/contractpage.vue"),
+    },
+    {
+      path: "/alipay/payment-result",
+      meta: {
+        requiresAuth: false,
+        layout: "landing",
+      },
+      component: () => import("@/views/pages/PaymentResult.vue"),
     },
     {
       path: "/RentHouse",
