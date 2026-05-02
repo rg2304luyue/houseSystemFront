@@ -4,7 +4,7 @@ export default [
     name: "auth-signin",
     component: () =>
       import(
-        /* webpackChunkName: "auth-signin" */ "@/views/auth/SigninPage.vue"
+        /* webpackChunkName: "auth-signin" */ "@/views/SigninPage.vue"
       ),
     meta: {
       layout: "auth",
@@ -16,7 +16,7 @@ export default [
     name: "auth-signup",
     component: () =>
       import(
-        /* webpackChunkName: "auth-signup" */ "@/views/auth/SignupPage.vue"
+        /* webpackChunkName: "auth-signup" */ "@/views/SignupPage.vue"
       ),
     meta: {
       layout: "auth",
@@ -28,7 +28,7 @@ export default [
     name: "verify-email",
     component: () =>
       import(
-        /* webpackChunkName: "verify-email" */ "@/views/auth/VerifyEmailPage.vue"
+        /* webpackChunkName: "verify-email" */ "@/views/VerifyEmailPage.vue"
       ),
     meta: {
       requiresAuth: true,

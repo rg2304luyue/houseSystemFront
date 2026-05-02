@@ -62,9 +62,10 @@ const editedItem = ref({
 import { useProfileStore } from "@/stores/profileStore";
 
 
-import {userTokenStore} from "@/stores/token";
+import { useAuthStore } from "@/stores/authStore";
 
-const profileStore = useProfileStore();  // 使用购物车 store
+const profileStore = useProfileStore();
+const authStore = useAuthStore();
 const account = reactive({ ...profileStore.account });
 const proceedToPay = () => {
   cartStore.submitCart(); // 提交购物车
@@ -87,13 +88,12 @@ const detailDialog = ref(false)
 const save = async () => {
   try {
     // const response = await axios.post('/sdApi/orders', editedItem.value);
-    const tokenStore = userTokenStore(); // 使用token store
     const response = await axios.post(
       '/sdApi/orders',
       editedItem.value,
       {
         headers: {
-          Authorization: tokenStore.token, // 或者加上前缀：`Bearer ${tokenStore.token}`
+          Authorization: authStore.token,
         }
       }
     );

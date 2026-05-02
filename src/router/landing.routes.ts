@@ -4,7 +4,7 @@ export default [
     name: "landing-toolbar",
     component: () =>
       import(
-        /* webpackChunkName: "landing-toolbar" */ "@/views/landing/toolbar/ToolbarPage.vue"
+        /* webpackChunkName: "landing-toolbar" */ "@/views/ToolbarPage.vue"
       ),
     meta: {
       requiresAuth: true,

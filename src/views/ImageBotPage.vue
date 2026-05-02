@@ -4,8 +4,8 @@
 * @Description:
 -->
 <script setup lang="ts">
-import ImageToImage from "./SDComponents/ImageToImage.vue";
-import TextToImage from "./SDComponents/TextToImage.vue";
+import ImageToImage from "./ImageToImagePage.vue";
+import TextToImage from "./TextToImagePage.vue";
 import { useStableDiffusionStore } from "@/stores/stableDiffusionStore";
 const sdStore = useStableDiffusionStore();
 

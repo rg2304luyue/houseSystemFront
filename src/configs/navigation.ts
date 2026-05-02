@@ -2,7 +2,6 @@
 import menuLanding from "./menus/landing.menu";
 import menuUI from "./menus/ui.menu";
 import menuPages from "./menus/pages.menu";
-import { text } from "stream/consumers";
 
 export default {
   menu: [
@@ -48,21 +47,6 @@ export default {
           text: "新闻编辑",
           link: "/newsEditor",
           icon: "mdi-file-document-edit-outline",
-        },
-        {
-          text: "测试页面",
-          link: "/testIndexPage1",
-          icon: "mdi-newspaper",
-        },
-        {
-          text: "测试管理页面2",
-          link: "/testManagePage",
-          icon: "mdi-newspaper",
-        },
-        {
-          text: "测试管理页面3",
-          link: "/testManagePage2",
-          icon: "mdi-newspaper",
         },
         {
           icon: "mdi-robot-excited-outline",

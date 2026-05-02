@@ -6,14 +6,14 @@
 <script setup lang="ts">
 import { Icon } from "@iconify/vue";
 import { useTheme } from "vuetify";
-import { useAppStore } from "../../stores/appStore";
-const appStore = useAppStore();
+import { useCustomizeThemeStore } from "@/stores/customizeTheme";
+const customizeTheme = useCustomizeThemeStore();
 
 const theme = useTheme();
 
 const toggleTheme = () => {
   theme.global.name.value = theme.global.current.value.dark ? "light" : "dark";
-  appStore.setTheme(theme.global.name.value);
+  customizeTheme.darkTheme = theme.global.current.value.dark;
 };
 
 const isDark = computed(() => theme.global.current.value.dark);

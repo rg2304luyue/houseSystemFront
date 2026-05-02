@@ -3,7 +3,7 @@ import { defineStore } from 'pinia';
 import axios from 'axios';
 import { useProfileStore } from '@/stores/profileStore';
 //存储token
-import {userTokenStore} from "@/stores/token";
+import { useAuthStore } from '@/stores/authStore';
 
 export const useCartStore = defineStore('cart', {
   state: () => ({
@@ -32,11 +32,11 @@ export const useCartStore = defineStore('cart', {
     async submitCart() {
         const profileStore = useProfileStore();
         const userid = profileStore.getUserId(); 
-        const tokenStore = userTokenStore();
-        const token = tokenStore.token;
+        const authStore = useAuthStore();
+        const token = authStore.token;
         console.log("token:", token);
         console.log('userid:', userid);
-        console.log('isLoggedIn:', tokenStore.isLoggedIn)
+        console.log('isLoggedIn:', authStore.isLoggedIn)
         try {
           for (const item of this.cartItems) {
             const payload = {
@@ -51,11 +51,11 @@ export const useCartStore = defineStore('cart', {
               address: '',
               times: '',
             };
-            console.log(tokenStore.token);
+            console.log(authStore.token);
             // await axios.post('sdApi/shoppingcart/addition', payload);
             await axios.post('sdApi/shoppingcart/addition', payload, {
                 headers: {
-                  Authorization: `${tokenStore.token}`, // 加 token
+                  Authorization: `${authStore.token}`, // 加 token
                 },
               });
           }

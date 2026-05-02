@@ -4,7 +4,6 @@ import { useAuthStore } from "@/stores/authStore";
 import axios from "axios";
 import router from "~/src/router";
 import { nextTick, ref, onUnmounted } from 'vue';
-import { userTokenStore } from "@/stores/token";
 import { useProfileStore } from "@/stores/profileStore";
 
 const authStore = useAuthStore();
@@ -148,8 +147,8 @@ const handleSmsLogin = async () => {
         authStore.setLoggedIn(true);
         
         // 存储token
-        const tokenStore = userTokenStore();
-        tokenStore.setToken(response.data.data.token);
+        const authStore = useAuthStore();
+        authStore.setToken(response.data.data.token);
         
         // 获取用户信息
         const profileRes = await axios.get("http://localhost:5000/user/userinfo", {
@@ -339,8 +338,8 @@ const handleEmailCodeLogin = async () => {
         authStore.setLoggedIn(true);
         
         // 存储token
-        const tokenStore = userTokenStore();
-        tokenStore.setToken(response.data.data.token);
+        const authStore = useAuthStore();
+        authStore.setToken(response.data.data.token);
         
         // 获取用户信息
         const profileRes = await axios.get("http://localhost:5000/user/userinfo", {

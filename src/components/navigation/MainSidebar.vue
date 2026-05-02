@@ -8,37 +8,9 @@ import configs from "@/configs";
 import MainMenu from "@/components/navigation/MainMenu.vue";
 import { useCustomizeThemeStore } from "@/stores/customizeTheme";
 import { Icon } from "@iconify/vue";
-import { useProfileStore } from "@/stores/profileStore";
-import { onMounted, ref, watch } from 'vue';
-
-// 引入不同用户类型的导航配置
-import navigationUserType0 from "@/configs/navigation0";
-import navigationUserType1 from "@/configs/navigation1";
-import navigationUserType2 from "@/configs/navigation2";
+import { onMounted } from 'vue';
 
 const customizeTheme = useCustomizeThemeStore();
-const profileStore = useProfileStore();
-const userType = ref(profileStore.user.userType);
-
-// 根据用户类型选择导航配置
-const getNavigationConfig = () => {
-  switch (userType.value) {
-    case 0:
-      return navigationUserType0;
-    case 1:
-      return navigationUserType1;
-    case 2:
-      return navigationUserType2;
-    default:
-      return {};
-  }
-};
-
-const navigation = ref(getNavigationConfig());
-
-watch(() => userType.value, () => {
-  navigation.value = getNavigationConfig();
-});
 
 const openGithubSite = () => {
   window.open("https://github.com/", "_blank");
@@ -92,7 +64,7 @@ const scrollToBottom = () => {
     <!---Nav List -->
     <!-- ---------------------------------------------- -->
 
-    <main-menu :menu="navigation.menu"></main-menu>
+    <main-menu :menu="configs.navigation.menu"></main-menu>
 
     <!-- ---------------------------------------------- -->
     <!---Bottom Area -->

@@ -5,8 +5,8 @@ export const useChatGPTStore = defineStore({
   state: () => ({
     propmpt: "",
     configDialog: false,
-    apiKey: "sk-peE5Ux1D4w9lahUYB71c145bD2874226Ae7eF696B3De1930",
-    proxyUrl: "https://api.vveai.com",
+    apiKey: import.meta.env.VITE_OPENAI_API_KEY || "",
+    proxyUrl: import.meta.env.VITE_OPENAI_PROXY_URL || "",
     model: "gpt-4-turbo-2024-04-09",
   }),
 

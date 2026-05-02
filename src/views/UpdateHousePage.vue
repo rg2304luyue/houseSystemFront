@@ -2,7 +2,7 @@
 import { ref, computed,onMounted } from "vue"; // computed 可能不再需要，除非有其他计算属性
 import moment from "moment";
 import { formatFileSize } from "@/utils/common";
-import AnimationUpload from "./SDComponents/AnimationUpload.vue";
+import AnimationUpload from "./AnimationUploadPage.vue";
 import axios from "axios";
 
 //导入路由

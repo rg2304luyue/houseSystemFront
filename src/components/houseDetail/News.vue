@@ -1,44 +1,41 @@
 <template>
   <div class="max-w-5xl mx-auto px-6 py-6">
-    <el-card shadow="always" class="news-card">
-      <template #header>
-        <div class="flex justify-between items-center">
-          <!-- 图标和标题 -->
-          <div class="flex items-center gap-2">
-            <h2 class="text-2xl font-bold text-gray-800"><el-icon size="24"><Document /></el-icon>今日房产新闻</h2>
-          </div>
+    <v-card class="news-card" elevation="3">
+      <template #title>
+        <div class="flex items-center gap-2">
+          <v-icon icon="mdi-file-document-outline" size="24" />
+          <span class="text-2xl font-bold text-gray-800">今日房产新闻</span>
         </div>
       </template>
 
-      <transition name="fade" mode="out-in">
-        <div v-if="currentNews" :key="currentNews.id" class="py-4 space-y-3">
-          <!-- 新闻标题 -->
-          <h3 class="text-xl font-semibold text-indigo-700">{{ currentNews.title }}</h3>
-          <!-- 来源和时间 -->
-          <div class="text-sm text-gray-500 flex items-center gap-4">
-            <span>发布者：{{ currentNews.author }}</span>
-            <span>🕒 {{ currentNews.date }}</span>
+      <v-card-text>
+        <transition name="fade" mode="out-in">
+          <div v-if="currentNews" :key="currentNews.id" class="py-4 space-y-3">
+            <h3 class="text-xl font-semibold text-indigo-700">{{ currentNews.title }}</h3>
+            <div class="text-sm text-gray-500 flex items-center gap-4">
+              <span>发布者：{{ currentNews.author }}</span>
+              <span>{{ currentNews.date }}</span>
+            </div>
+            <p class="text-gray-800 leading-7 tracking-wide text-base whitespace-pre-line">
+              {{ currentNews.content }}
+            </p>
           </div>
-          <!-- 内容 -->
-          <p class="text-gray-800 leading-7 tracking-wide text-base whitespace-pre-line">
-            {{ currentNews.content }}
-          </p>
-        </div>
-      </transition>
-      <!-- 换一条按钮 -->
-          <el-button type="primary" size="medium" plain @click="showRandomNews">
-            <el-icon><Refresh /></el-icon>
-            换一条
-          </el-button>
-    </el-card>
+        </transition>
+      </v-card-text>
+
+      <v-card-actions>
+        <v-btn variant="outlined" color="primary" @click="showRandomNews">
+          <v-icon icon="mdi-refresh" start />
+          换一条
+        </v-btn>
+      </v-card-actions>
+    </v-card>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Document, Refresh } from '@element-plus/icons-vue'
 
-// 模拟新闻数据（更丰富）
 const newsList = [
   {
     id: 1,
@@ -64,7 +61,7 @@ const newsList = [
   {
     id: 4,
     title: '广州楼市调控升级',
-    content: `广州发布最新调控政策，限制部分区域购房资格，打击投机性购房行为。\n政策明确指出，“房住不炒”仍是核心导向，重点保障首套刚需购房人群。`,
+    content: `广州发布最新调控政策，限制部分区域购房资格，打击投机性购房行为。\n政策明确指出，"房住不炒"仍是核心导向，重点保障首套刚需购房人群。`,
     author: '广州日报',
     date: '2025-05-15'
   }
@@ -85,7 +82,6 @@ onMounted(() => {
 <style scoped>
 .news-card {
   border-radius: 16px;
-  background: #fff;
   transition: box-shadow 0.3s ease;
 }
 .news-card:hover {

@@ -26,11 +26,6 @@ import Snackbar from "@/components/common/Snackbar.vue";
 //主题
 import { useTheme } from "vuetify";
 const theme = useTheme();
-import { useAppStore } from "@/stores/appStore";
-const appStore = useAppStore();
-// live2d
-import Live2d from "@/components/Live2d.vue";
-import RepaireCard from "./components/RepaireCard.vue";
 const customizeTheme = useCustomizeThemeStore();
 const route = useRoute();
 
@@ -56,7 +51,7 @@ const currentLayout = computed(() => {
   return layouts[layoutName];
 });
 onMounted(() => {
-  theme.global.name.value = appStore.theme;
+  theme.global.name.value = customizeTheme.darkTheme ? 'dark' : 'light';
 });
 </script>
 

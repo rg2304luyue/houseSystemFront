@@ -12,9 +12,9 @@ import { MdPreview } from "md-editor-v3";
 import { useChatGPTStore } from "@/stores/chatGPTStore";
 import "md-editor-v3/lib/preview.css";
 import ApiKeyDialog from "@/components/ApiKeyDialog.vue";
-import { userTokenStore } from "@/stores/token";
+import { useAuthStore } from "@/stores/authStore";
 
-const tokenStore = userTokenStore();
+const authStore = useAuthStore();
 const profileStore = useProfileStore();
 const signon = reactive({ ...profileStore.signon });
 const snackbarStore = useSnackbarStore();
@@ -58,7 +58,7 @@ const isValidToken = (val: any): val is string => {
 };
 
 const getToken = (): string | null => {
-  if (isValidToken(tokenStore.token)) return tokenStore.token;
+  if (isValidToken(authStore.token)) return authStore.token;
   for (const key of ['token', 'accessToken', 'userToken']) {
     const raw = localStorage.getItem(key);
     if (!raw) continue;

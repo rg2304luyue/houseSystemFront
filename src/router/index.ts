@@ -15,7 +15,7 @@ export const routes = [
       requiresAuth: true,
       layout: "landing",
     },
-    component: () => import("@/views/pages/DashBoard.vue"),
+    component: () => import("@/views/DashboardPage.vue"),
   },
   {
     path: "/houseList",
@@ -23,40 +23,15 @@ export const routes = [
       requiresAuth: true,
       layout: "landing",
     },
-    component: () => import("@/views/pages/HouseListPage.vue"),
+    component: () => import("@/views/HouseListPage.vue"),
   },
-  {
-    path: "/testIndexPage1",
-    meta: {
-      requiresAuth: true,
-      layout: "landing",
-    },
-    component: () => import("@/views/pages/TestIndexPage.vue"),
-  },
-  {
-    path: "/testManagePage",
-    meta: {
-      requiresAuth: true,
-      layout: "landing",
-    },
-    component: () => import("@/views/pages/TestManagePage.vue"),
-  },
-  {
-    path: "/testManagePage2",
-    meta: {
-      requiresAuth: true,
-      layout: "landing",
-    },
-    component: () => import("@/views/pages/TestManagePage2.vue"),
-  },
-  
   {
     path: "/house",
     meta: {
       requiresAuth: true,
       layout: "landing",
     },
-    component: () => import("@/views/pages/ProcuctPage.vue"),
+    component: () => import("@/views/HouseDetailPage.vue"),
   },
   //管理员
   {
@@ -65,12 +40,12 @@ export const routes = [
       requiresAuth: true,
       layout: "landing",
     },
-    component: () => import("@/views/pages/Admin/AdministratorPanel.vue"),
+    component: () => import("@/views/AdminPanelPage.vue"),
   },
   //富文本编辑器
   {
     path: "/newsEditor",
-    component: () => import("@/views/pages/News/editor/RichTextEditorPage.vue"),
+    component: () => import("@/views/NewsEditorPage.vue"),
     meta: {
       requiresAuth: true,
       layout: "landing",
@@ -80,7 +55,7 @@ export const routes = [
   },
   {
     path: "/newsList",
-    component: () => import("@/views/pages/News/editor/NewsListPage.vue"),
+    component: () => import("@/views/NewsListPage.vue"),
     meta: {
       requiresAuth: true,
       layout: "landing",
@@ -91,7 +66,7 @@ export const routes = [
   //新闻详情页
   {
     path: "/newsDetail/:id",
-    component: () => import("@/views/pages/News/editor/NewsDetailPage.vue"),
+    component: () => import("@/views/NewsDetailPage.vue"),
     meta: {
       requiresAuth: true,
       layout: "landing",
@@ -106,7 +81,7 @@ export const routes = [
       requiresAuth: true,
       layout: "landing",
     },
-    component: () => import("@/views/pages/landlord/uploadHousePage.vue"),
+    component: () => import("@/views/UploadHousePage.vue"),
   },
   {
     path: "/landlordUpdate/:id",
@@ -114,7 +89,7 @@ export const routes = [
       requiresAuth: true,
       layout: "landing",
     },
-    component: () => import("@/views/pages/landlord/updateHousePage.vue"),
+    component: () => import("@/views/UpdateHousePage.vue"),
   },
   //房东的房源
   {
@@ -123,7 +98,7 @@ export const routes = [
       requiresAuth: true,
       layout: "landing",
     },
-    component: () => import("@/views/pages/landlord/MyHouse.vue"),
+    component: () => import("@/views/MyHousePage.vue"),
   },
   {
     path: "/house/:id",
@@ -131,7 +106,7 @@ export const routes = [
       requiresAuth: true,
       layout: "landing",
     },
-    component: () => import("@/views/pages/ProcuctPage.vue"),
+    component: () => import("@/views/HouseDetailPage.vue"),
   },
     {
     path: "/landlord",
@@ -139,7 +114,7 @@ export const routes = [
       requiresAuth: true,
       layout: "landing",
     },
-    component: () => import("@/views/pages/LandlordProperties.vue"),
+    component: () => import("@/views/LandlordPropertiesPage.vue"),
   },
   {
     path: "/userManage",
@@ -147,7 +122,7 @@ export const routes = [
       requiresAuth: true,
       layout: "landing",
     },
-    component: () => import("@/views/pages/Admin/UserManagePage.vue"),
+    component: () => import("@/views/UserManagePage.vue"),
   },
     {
     path: "/news",
@@ -155,11 +130,11 @@ export const routes = [
       requiresAuth: true,
       layout: "landing",
     },
-    component: () => import("@/views/pages/NewsPage.vue"),
+    component: () => import("@/views/NewsManagerPage.vue"),
   },
   {
     path: "/ai/chatbot_v1",
-    component: () => import("@/views/chatgpt/ChatBotV1.vue"),
+    component: () => import("@/views/ChatBotPage.vue"),
     meta: {
       requiresAuth: true,
       layout: "landing",
@@ -170,7 +145,7 @@ export const routes = [
   // image bot
   {
     path: "/image-bot",
-    component: () => import("~/src/views/pages/ImageBot.vue"),
+    component: () => import("@/views/ImageBotPage.vue"),
     meta: {
       requiresAuth: true,
       layout: "landing",
@@ -183,7 +158,7 @@ export const routes = [
     path: "/profile",
     name: "profile",
     component: () =>
-      import(/* webpackChunkName: "profile" */ "@/views/pages/ProfilePage.vue"),
+      import(/* webpackChunkName: "profile" */ "@/views/ProfilePage.vue"),
     meta: {
       requiresAuth: true,
       layout: "ui",
@@ -195,7 +170,7 @@ export const routes = [
     path: "/:pathMatch(.*)*",
     name: "error",
     component: () =>
-      import(/* webpackChunkName: "error" */ "@/views/errors/NotFoundPage.vue"),
+      import(/* webpackChunkName: "error" */ "@/views/NotFoundPage.vue"),
   },
   // lottie Animation
   {
@@ -203,7 +178,7 @@ export const routes = [
     name: "ui-lottie-animation",
     component: () =>
       import(
-        /* webpackChunkName: "ui-lottie-animation" */ "@/views/ui/LottieAnimationPage.vue"
+        /* webpackChunkName: "ui-lottie-animation" */ "@/views/LottieAnimationPage.vue"
       ),
     meta: {
       requiresAuth: true,
@@ -218,7 +193,7 @@ export const routes = [
         requiresAuth: true,
         layout: "landing",
       },
-      component: () => import("@/views/pages/chatpage.vue"),
+      component: () => import("@/views/ChatPage.vue"),
     },
     {
       path: "/payPay",
@@ -226,7 +201,7 @@ export const routes = [
         requiresAuth: true,
         layout: "landing",
       },
-      component: () => import("@/views/pages/PricingPage.vue"),
+      component: () => import("@/views/PricingPage.vue"),
     },
     {
       path: "/contract",
@@ -234,7 +209,7 @@ export const routes = [
         requiresAuth: true,
         layout: "landing",
       },
-      component: () => import("@/views/pages/contractpage.vue"),
+      component: () => import("@/views/ContractPage.vue"),
     },
     {
       path: "/alipay/payment-result",
@@ -242,7 +217,7 @@ export const routes = [
         requiresAuth: false,
         layout: "landing",
       },
-      component: () => import("@/views/pages/PaymentResult.vue"),
+      component: () => import("@/views/PaymentResultPage.vue"),
     },
     {
       path: "/RentHouse",
@@ -250,7 +225,7 @@ export const routes = [
         requiresAuth: true,
         layout: "landing",
       },
-      component: () => import("@/views/pages/AccountRentHouse.vue"),
+      component: () => import("@/views/AccountRentHousePage.vue"),
     },
     {
       path: "/setpassword",
@@ -258,7 +233,7 @@ export const routes = [
         requiresAuth: true,
         layout: "landing",
       },
-      component: () => import("@/views/pages/ResetPassword.vue"),
+      component: () => import("@/views/ResetPasswordPage.vue"),
     },
 
   ...LandingRoutes,
