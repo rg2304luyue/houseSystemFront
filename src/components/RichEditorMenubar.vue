@@ -33,7 +33,7 @@ const handleImageUploadAndInsert = async () => {
 
   try {
     // 显示加载状态 (如果需要，你可以添加一个 isUploading ref)
-    const response = await axios.post('http://localhost:5000/oss/upload_general_image', formData, {
+    const response = await axios.post('/oss/upload_general_image', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
 

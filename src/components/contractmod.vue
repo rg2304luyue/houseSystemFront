@@ -211,7 +211,7 @@ const submitContract = async () => {
       houseid: houseid.value,
     }
 
-    const response = await fetch('http://localhost:5000/contracts', {
+    const response = await fetch('/contracts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -231,7 +231,7 @@ const submitContract = async () => {
     const contractId = result.data.id
     const totalAmount = parseFloat(rentValue.value).toFixed(2)
 
-    const payResponse = await fetch('http://localhost:5000/api/alipay/pay', {
+    const payResponse = await fetch('/api/alipay/pay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

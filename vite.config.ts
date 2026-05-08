@@ -57,6 +57,7 @@ export default defineConfig({
       "/oss":         "http://localhost:5000",
       "/celery":      "http://localhost:5000",
       "/alipay":      "http://localhost:5000",
+      "/api/alipay":  "http://localhost:5000",
       "/socket.io": {
         target: "http://localhost:5000",
         ws: true,

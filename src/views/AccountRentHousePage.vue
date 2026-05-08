@@ -47,7 +47,7 @@ const fetchRentalProperties = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const response = await axios.get(`http://localhost:5000/rental/tenants/${currentUser.value}`);
+    const response = await axios.get(`/rental/tenants/${currentUser.value}`);
     if (response.data.success && response.data.code === 200) {
       // 转换数据格式并计算状态
       rentalProperties.value = response.data.data.map(property => {

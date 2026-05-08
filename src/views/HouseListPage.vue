@@ -559,7 +559,7 @@ const loadingRecommendation = ref(false);
 const fetchRecommendedHouse = async () => {
   loadingRecommendation.value = true;
   try {
-    const response = await fetch('http://127.0.0.1:5000/houseinfo/views');
+    const response = await fetch('/houseinfo/views');
     const data = await response.json();
     if (data.success && data.code === 200) {
       recommendedHouse.value = data.data;

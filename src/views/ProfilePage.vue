@@ -28,7 +28,7 @@ const onAvatarUpload = async (blob: Blob, done: () => void) => {
     // --- 步骤 1: 上传图片到 OSS 接口 ---
     console.log("步骤1: 正在上传图片到OSS...");
     const ossResponse = await axios.post(
-      'http://localhost:5000/oss/upload_general_image',
+      '/oss/upload_general_image',
       ossFormData,
       {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -54,7 +54,7 @@ const onAvatarUpload = async (blob: Blob, done: () => void) => {
     };
 
     const userUpdateResponse = await axios.put(
-      'http://localhost:5000/user/userinfo',
+      '/user/userinfo',
       userInfoPayload
     );
 
@@ -180,7 +180,7 @@ const updatePassword = async () => {
   const id = profileStore.getUserId(); // 获取用户 ID
 
   try {
-    const response = await axios.put('http://localhost:5000/user/userinfo/password', {
+    const response = await axios.put('/user/userinfo/password', {
       id, // 添加 id 参数
       name: user.name,
       password: newpassword.value
@@ -228,7 +228,7 @@ const updateUserInfo = async () => {
   const id = profileStore.getUserId(); // 获取用户 ID
 
   try {
-    const response = await axios.put('http://localhost:5000/user/userinfo', {
+    const response = await axios.put('/user/userinfo', {
       id, // 添加 id 参数
       name: user.name,
       addr: user.addr,
@@ -281,7 +281,7 @@ const sendEmailVerificationCode = async () => {
     isSendingCode.value = true;
     verificationError.value = '';
     
-    const response = await axios.post('http://localhost:5000/user/userinfo/tolanlord', {
+    const response = await axios.post('/user/userinfo/tolanlord', {
       email: user.email
     });
     
@@ -330,7 +330,7 @@ const submitLandlordApplication = async () => {
     isSubmitting.value = true;
     verificationError.value = '';
     
-    const response = await axios.put('http://localhost:5000/user/userinfo/usertype', {
+    const response = await axios.put('/user/userinfo/usertype', {
       email: user.email,
       code: emailVerificationCode.value
     });
@@ -371,14 +371,14 @@ const avatarInput = ref<HTMLInputElement | null>(null);
 const avatarRefreshKey = ref(0); // 用于强制刷新图片缓存
 
 // 定义默认头像URL（已调整到更靠前的位置）
-const DEFAULT_AVATAR = "http://localhost:5000/user/images/16_20250612121326.jpg";
+const DEFAULT_AVATAR = "/user/images/16_20250612121326.jpg";
 
 // 获取用户头像（修改了默认值设置逻辑）
 const loadUserAvatar = async () => {
   try {
     // 修改API路径与请求方式，使用GET并传递id参数
     const response = await axios.get(
-      `http://localhost:5000/user/userinfo/avatar`,
+      `/user/userinfo/avatar`,
       { params: { id: profileStore.getUserId() } }
     );
     
@@ -416,7 +416,7 @@ const handleAvatarUpload = async (event: Event) => {
       formData.append('avatar', avatarFile.value);
       formData.append('userId', profileStore.getUserId());
 
-      const response = await axios.post('http://localhost:5000/user/userinfo/avatarurl', formData, {
+      const response = await axios.post('/user/userinfo/avatarurl', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

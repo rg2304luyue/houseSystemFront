@@ -55,7 +55,7 @@ const fetchMessages = async () => {
     loading.value = true;
     error.value = null;
     
-    const response = await axios.get(`http://localhost:5000/comments/messages/receiver/${username}`);
+    const response = await axios.get(`/comments/messages/receiver/${username}`);
     
     if (
       response.data &&

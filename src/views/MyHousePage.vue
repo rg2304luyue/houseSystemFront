@@ -56,7 +56,7 @@ const landlordName = computed(() => profileStore.user.name || 'Lappand');
 const fetchHouses = async () => {
   loading.value = true;
   try {
-    const response = await axios.get('http://localhost:5000/houseinfo/by_landlord', {
+    const response = await axios.get('/houseinfo/by_landlord', {
       params: {
         name: landlordName.value,
         page: currentPage.value
@@ -83,7 +83,7 @@ const toggleAvailability = async (house: HouseItem) => {
   const newVal = house.isavailable === 1 ? 0 : 1;
   try {
     // >>> 调用后端 PUT 接口
-    await axios.put(`http://localhost:5000/houseinfo/${house.id}/isavailable`, {
+    await axios.put(`/houseinfo/${house.id}/isavailable`, {
       isavailable: newVal
     });
     // <<<

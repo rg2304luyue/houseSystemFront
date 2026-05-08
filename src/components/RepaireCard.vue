@@ -247,7 +247,7 @@ async function submitForm() {
       property_id: currentProperty.value?.id
     }
     
-    const response = await fetch('http://localhost:5000/repaires', {
+    const response = await fetch('/repaires', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -73,7 +73,7 @@ const submit = async () => {
     };
     try {
       const response = await axios.post(
-        "http://localhost:5000/news",
+        "/news",
         payload
       );
       snackbarStore.showSuccessMessage("发布成功！");
@@ -103,7 +103,7 @@ const uploadCoverImage = async (files: File[] | File | null) => {
 
   try {
     const { data } = await axios.post(
-      'http://localhost:5000/oss/upload_general_image',
+      '/oss/upload_general_image',
       formData,
       {
         headers: {

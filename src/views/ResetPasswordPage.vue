@@ -46,7 +46,7 @@ const sendVerificationCode = async () => {
     isLoading.value = true;
     
     try {
-      const response = await fetch("http://127.0.0.1:5000/user/userinfo/password", {
+      const response = await fetch("/user/userinfo/password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -130,7 +130,7 @@ const handleResetPassword = async () => {
     isLoading.value = true;
     
     try {
-      const response = await fetch("http://127.0.0.1:5000/user/userinfo/password_e", {
+      const response = await fetch("/user/userinfo/password_e", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

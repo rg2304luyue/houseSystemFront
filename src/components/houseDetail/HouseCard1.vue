@@ -88,7 +88,7 @@ const onDateSelected = async (date: string | Date) => {
   }
 
   try {
-    const response = await fetch('http://localhost:5000/appointments', {
+    const response = await fetch('/appointments', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

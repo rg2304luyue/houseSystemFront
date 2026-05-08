@@ -58,7 +58,7 @@ const goTestManage2 = () => router.push('/testManagePage2');
 const getUsers = async () => {
   loading.value = true;
   try {
-    const response = await axios.get('http://localhost:5000/user/getAllUsers');
+    const response = await axios.get('/user/getAllUsers');
     if (response.data.code === 200) {
       usersList.value = response.data.data;
       totalRows.value = usersList.value.length;
@@ -118,7 +118,7 @@ const deleteUser = async () => {
   if (!selectedUser.value) return;
   
   try {
-    const response = await axios.delete(`http://localhost:5000/user/${selectedUser.value.id}`);
+    const response = await axios.delete(`/user/${selectedUser.value.id}`);
     if (response.data.code === 200) {
       snackbar.show = true;
       snackbar.message = response.data.message;

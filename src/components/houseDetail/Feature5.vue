@@ -40,7 +40,7 @@ const isLoading = ref(false);
 const loadMessages = async () => {
   isLoading.value = true;
   try {
-    const response = await axios.get(`http://localhost:5000/comments/${houseId.value}`);
+    const response = await axios.get(`/comments/${houseId.value}`);
     
     // 处理空数据情况
     if (!response.data?.data) {
@@ -93,7 +93,7 @@ const submitMessage = async () => {
   }
 
   try {
-    const response = await axios.post("http://localhost:5000/comments", {
+    const response = await axios.post("/comments", {
       house_id: parseInt(houseId.value),
       username: currentUser.value,
       type: 1,

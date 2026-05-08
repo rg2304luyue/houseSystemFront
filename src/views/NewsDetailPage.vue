@@ -31,7 +31,7 @@ const fetchNewsDetail = async () => {
   error.value = null;
 
   try {
-    const response = await axios.get(`http://localhost:5000/news/${newsId}`);
+    const response = await axios.get(`/news/${newsId}`);
     
     if (response.data && response.data.success) {
       const rawData = response.data.data;

@@ -28,7 +28,7 @@ declare global {
 //获取函数
 const fetchHouse = async () => {
   try {
-    const { data } = await axios.get(`http://localhost:5000/houseinfo/${id}`);
+    const { data } = await axios.get(`/houseinfo/${id}`);
     Object.assign(house_info.value, data.data);
   } catch (e) {
     snackbarStore.showErrorMessage('获取房屋信息失败');
@@ -37,7 +37,7 @@ const fetchHouse = async () => {
 
 const fetchHouseDetail = async () => {
   try {
-    const { data } = await axios.get(`http://localhost:5000/housedetail/${id}`);
+    const { data } = await axios.get(`/housedetail/${id}`);
     Object.assign(house_detail.value, data.data);
   } catch (e) {
     snackbarStore.showErrorMessage('获取房屋详情失败');
@@ -315,7 +315,7 @@ const uploadNewHouse = async () => {
     });
 
     try {
-      const response = await axios.post('http://localhost:5000/oss/upload_property_detail_images', formData, {
+      const response = await axios.post('/oss/upload_property_detail_images', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       if (response.data.success && response.data.photo_urls && Array.isArray(response.data.photo_urls)) {
@@ -382,7 +382,7 @@ const uploadNewHouse = async () => {
 
   // 步骤5: 调用创建完整房源接口
   try {
-    const response = await axios.put(`http://localhost:5000/houseinfo/${id}/full_update`, finalPayload);
+    const response = await axios.put(`/houseinfo/${id}/full_update`, finalPayload);
     if (response.data.success) {
       console.log("房源更新成功，返回数据:", response.data);
       snackbarStore.showSuccessMessage(`房源更新成功! ID: ${response.data.data.house_info.id}`);

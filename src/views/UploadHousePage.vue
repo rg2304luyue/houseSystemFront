@@ -283,7 +283,7 @@ const uploadNewHouse = async () => {
     });
 
     try {
-      const response = await axios.post('http://localhost:5000/oss/upload_property_detail_images', formData, {
+      const response = await axios.post('/oss/upload_property_detail_images', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       if (response.data.success && response.data.photo_urls && Array.isArray(response.data.photo_urls)) {
@@ -350,7 +350,7 @@ const uploadNewHouse = async () => {
 
   // 步骤5: 调用创建完整房源接口
   try {
-    const response = await axios.post('http://localhost:5000/houseinfo/create_full_listing', finalPayload);
+    const response = await axios.post('/houseinfo/create_full_listing', finalPayload);
     if (response.data.success) {
       console.log("房源创建成功，返回数据:", response.data);
       snackbarStore.showSuccessMessage(`房源创建成功! ID: ${response.data.data.house_info.id}`);

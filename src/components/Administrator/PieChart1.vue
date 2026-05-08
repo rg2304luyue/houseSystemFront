@@ -20,7 +20,7 @@ const dataSet = ref([
 ]);
 const fetchdataSets = async () => {
   try {
-    const response = await axios.get("http://localhost:5000/houseinfo/piedata");
+    const response = await axios.get("/houseinfo/piedata");
     dataSet.value = response.data.data; // 假设返回的是数组
   } catch (error) {
     console.error("获取数据失败:", error);

@@ -91,7 +91,7 @@ const editForm = ref({ id: null, title: "", content: "", publish_time: "" });
 
 async function fetchNews() {
   try {
-    const res = await fetch('http://localhost:5000/news');
+    const res = await fetch('/news');
     if (res.ok) {
       const data = await res.json();
       landlordNews.value = Array.isArray(data.data.items) ? data.data.items : [];
@@ -157,7 +157,7 @@ async function saveNews() {
     
     if (editIndex.value !== null) {
       // 编辑，PUT请求
-      res = await fetch(`http://localhost:5000/news/${id}`, {
+      res = await fetch(`/news/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, content, publish_time }),
@@ -191,7 +191,7 @@ async function saveNews() {
       }
     } else {
       // 新增，POST请求
-      res = await fetch('http://localhost:5000/news', {
+      res = await fetch('/news', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, content, publish_time }),
@@ -223,7 +223,7 @@ async function saveNews() {
 async function confirmDelete(item, index) {
   if (!confirm("确认删除该新闻吗？")) return;
   try {
-    const res = await fetch(`http://localhost:5000/news/${item.id}`, { method: "DELETE" });
+    const res = await fetch(`/news/${item.id}`, { method: "DELETE" });
     if (res.ok) {
       landlordNews.value.splice(index, 1);
     } else {

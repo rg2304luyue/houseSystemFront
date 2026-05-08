@@ -45,7 +45,7 @@ const drawer = ref(true);
 // 流式控制
 const abortController = ref<AbortController | null>(null);
 
-const BASE_URL = 'http://localhost:5000/chat-ai';
+const BASE_URL = '/chat-ai';
 
 const axiosInstance = axios.create({ baseURL: BASE_URL });
 

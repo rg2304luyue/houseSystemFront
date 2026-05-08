@@ -112,7 +112,7 @@ const loading = ref<boolean>(false);
 const fetchNews = async () => {
   loading.value = true;
   try {
-    const response = await fetch('http://localhost:5000/news?page=1&per_page=999');
+    const response = await fetch('/news?page=1&per_page=999');
     const data = await response.json();
     
    

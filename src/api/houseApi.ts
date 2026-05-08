@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // 假设你的 vite.config.ts 中有代理设置 /sdApi 到你的 Flask 后端
-const API_BASE_URL = 'http://localhost:5000/houseinfo'; // 对应 @house_info_bp.route('/')
+const API_BASE_URL = '/houseinfo'; // 对应 @house_info_bp.route('/')
 
 export interface HouseFilters {
   page?: number;

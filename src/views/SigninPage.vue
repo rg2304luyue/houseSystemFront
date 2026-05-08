@@ -158,7 +158,7 @@ const sendEmailCode = async () => {
   errorMessages.value = "";
 
   try {
-    const response = await axios.post('http://localhost:5000/email-auth/send-code', {
+    const response = await axios.post('/email-auth/send-code', {
       email: emailForCode.value
     }, {
       headers: {
@@ -195,7 +195,7 @@ const handleEmailCodeLogin = async () => {
     errorMessages.value = "";
 
     try {
-      const response = await axios.post('http://localhost:5000/email-auth/verify-login', 
+      const response = await axios.post('/email-auth/verify-login', 
         new URLSearchParams({
           email: emailForCode.value,
           code: emailCode.value
@@ -215,7 +215,7 @@ const handleEmailCodeLogin = async () => {
         authStore.setToken(response.data.data.token);
         
         // 获取用户信息
-        const profileRes = await axios.get("http://localhost:5000/user/userinfo", {
+        const profileRes = await axios.get("/user/userinfo", {
           headers: {
             Authorization: response.data.data.token,
           },

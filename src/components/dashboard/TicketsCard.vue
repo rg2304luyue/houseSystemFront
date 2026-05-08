@@ -72,7 +72,7 @@ const fetchLogs = async () => {
   loading.value = true;
   try {
     // 你可以添加分页参数 ?page=1&per_page=20 等
-    const response = await fetch("http://localhost:5000/admin/logs");
+    const response = await fetch("/admin/logs");
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

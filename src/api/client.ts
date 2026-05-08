@@ -1,6 +1,6 @@
 // src/api/client.ts
 // 统一 Axios 实例 —— 本地开发走 Vite proxy，Docker 走 Nginx proxy
-// 所有 API 调用请使用相对路径（如 /user/login），不要写死 http://localhost:5000
+// 所有 API 调用请使用相对路径（如 /user/login），不要写死 
 import axios from "axios";
 
 const apiClient = axios.create({
