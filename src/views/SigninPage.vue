@@ -9,33 +9,25 @@ import { useProfileStore } from "@/stores/profileStore";
 const authStore = useAuthStore();
 const isLoading = ref(false);
 const isSignInDisabled = ref(false);
-const isSmsLoading = ref(false);
-const isSendingCode = ref(false);
 const isEmailCodeLoading = ref(false);
 const isSendingEmailCode = ref(false);
 
 // 登录方式切换
-const loginMethod = ref("password"); // "password", "sms", "email", or "email-code"
+const loginMethod = ref("password"); // "password", "email", or "email-code"
 
 // 表单引用
 const refPasswordForm = ref();
-const refSmsForm = ref();
 const refEmailForm = ref();
 const refEmailCodeForm = ref();
 
 // 表单数据
 const phone = ref("19511053624");
 const password = ref("123456");
-const smsCode = ref("");
 const email = ref("");
 const emailPassword = ref("");
 const emailForCode = ref("");
 const emailCode = ref("");
 const isFormValid = ref(true);
-
-// 短信验证码相关
-const countdown = ref(0);
-const countdownTimer = ref<NodeJS.Timeout | null>(null);
 
 // 邮箱验证码相关
 const emailCountdown = ref(0);
@@ -77,120 +69,6 @@ const handlePasswordLogin = async () => {
   }
 };
 
-// 发送短信验证码
-const sendSmsCode = async () => {
-  if (!validatePhone(phone.value)) {
-    error.value = true;
-    errorMessages.value = "请输入正确的手机号";
-    return;
-  }
-
-  if (countdown.value > 0) {
-    return; // 防止重复发送
-  }
-
-  isSendingCode.value = true;
-  error.value = false;
-  errorMessages.value = "";
-
-  try {
-    const response = await axios.post('http://localhost:5000/sms/send-code', {
-      phone: phone.value
-    }, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.data.success) {
-      // 开始倒计时
-      startCountdown();
-      // 显示成功消息
-      errorMessages.value = response.data.message;
-      error.value = false;
-    } else {
-      error.value = true;
-      errorMessages.value = response.data.message || "发送验证码失败";
-    }
-  } catch (err) {
-    console.error("发送验证码出错", err);
-    error.value = true;
-    errorMessages.value = err.response?.data?.message || "网络错误，发送失败";
-  } finally {
-    isSendingCode.value = false;
-  }
-};
-
-// 短信验证码登录
-const handleSmsLogin = async () => {
-  const { valid } = await refSmsForm.value.validate();
-
-  if (valid) {
-    isSmsLoading.value = true;
-    error.value = false;
-    errorMessages.value = "";
-
-    try {
-      const response = await axios.post('http://localhost:5000/sms/verify-login', 
-        new URLSearchParams({
-          phone: phone.value,
-          code: smsCode.value
-        }), {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
-        }
-      );
-
-      if (response.data.code === 201) {
-        // 登录成功，处理token
-        authStore.setLoggedIn(true);
-        
-        // 存储token
-        const authStore = useAuthStore();
-        authStore.setToken(response.data.data.token);
-        
-        // 获取用户信息
-        const profileRes = await axios.get("http://localhost:5000/user/userinfo", {
-          headers: {
-            Authorization: response.data.data.token,
-          },
-        });
-        
-        if (profileRes.data.code === 200) {
-          const ProfileStore = useProfileStore();
-          ProfileStore.setUser(profileRes.data.data);
-        }
-        
-        window.location.href = "/dashboard";
-      } else {
-        error.value = true;
-        errorMessages.value = response.data.message || "短信验证登录失败";
-      }
-    } catch (err) {
-      console.error("短信登录出错", err);
-      error.value = true;
-      errorMessages.value = err.response?.data?.message || "网络错误，登录失败";
-    } finally {
-      isSmsLoading.value = false;
-    }
-  }
-};
-
-// 开始倒计时
-const startCountdown = () => {
-  countdown.value = 60;
-  countdownTimer.value = setInterval(() => {
-    countdown.value--;
-    if (countdown.value <= 0) {
-      if (countdownTimer.value) {
-        clearInterval(countdownTimer.value);
-        countdownTimer.value = null;
-      }
-    }
-  }, 1000);
-};
-
 // 验证手机号格式
 const validatePhone = (phone) => {
   const pattern = /^1[3-9]\d{9}$/;
@@ -206,11 +84,6 @@ const phoneRules = ref([
 const passwordRules = ref([
   (v: string) => !!v || "密码不能为空",
   (v: string) => (v && v.length <= 20) || "密码长度不能超过20个字符",
-]);
-
-const smsCodeRules = ref([
-  (v: string) => !!v || "验证码不能为空",
-  (v: string) => (v && v.length === 6) || "验证码必须是6位数字",
 ]);
 
 // 邮箱验证规则
@@ -397,9 +270,6 @@ const resetPassword = () => {
 
 // 组件销毁时清理定时器
 onUnmounted(() => {
-  if (countdownTimer.value) {
-    clearInterval(countdownTimer.value);
-  }
   if (emailCountdownTimer.value) {
     clearInterval(emailCountdownTimer.value);
   }
@@ -443,10 +313,6 @@ onUnmounted(() => {
         <v-tab value="password">
           <v-icon start>mdi-lock</v-icon>
           密码登录
-        </v-tab>
-        <v-tab value="sms">
-          <v-icon start>mdi-message-text</v-icon>
-          短信登录
         </v-tab>
         <v-tab value="email">
           <v-icon start>mdi-email</v-icon>

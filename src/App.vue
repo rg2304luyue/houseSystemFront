@@ -23,6 +23,7 @@ import CustomizationMenu from "@/components/CustomizationMenu.vue";
 import { useCustomizeThemeStore } from "@/stores/customizeTheme";
 import BackToTop from "@/components/common/BackToTop.vue";
 import Snackbar from "@/components/common/Snackbar.vue";
+import RepaireCard from "@/components/RepaireCard.vue";
 //主题
 import { useTheme } from "vuetify";
 const theme = useTheme();

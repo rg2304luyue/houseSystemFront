@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router'
+import { useFixCardStore } from '@/stores/fixCardStore'
+
+const router = useRouter()
+const route = useRoute()
+const fixCardStore = useFixCardStore()
 
 // 定义props
 const props = defineProps<{
@@ -29,7 +35,7 @@ const form = ref({
     'https://images.unsplash.com/photo-1494526585095-c41746248156',
     'https://images.unsplash.com/photo-1470770841072-f978cf4d019e'
   ],
-  videos: [] // 例子里没视频，优先展示此字段
+  videos: []
 });
 
 const currentSlide = ref(0);
@@ -38,19 +44,11 @@ const mediaList = computed(() => {
   return form.value.videos.length > 0 ? form.value.videos : form.value.photos;
 });
 
-
 function onBookVisit() {
-  // 这里可以放跳转预约页面或者弹窗逻辑
   alert('预约看房功能暂未实现');
 }
 
-import { useRouter } from 'vue-router'
-const router = useRouter()
-const route = useRoute()
-
-// 获取当前路由的 houseid（即 /house/46 中的 46）
-const houseId = route.params.id  
-//const rentValue = "10251" // 定义租金数据
+const houseId = route.params.id
 
 const navigateToContract = () => {
   router.push({
@@ -58,8 +56,8 @@ const navigateToContract = () => {
     query: { rent: props.house.price ,
             landlord: props.house.landlord,
             phone: props.house.phone_num,
-            houseid: houseId 
-    } // 通过query参数传递
+            houseid: houseId
+    }
   })
 }
 
@@ -68,7 +66,7 @@ const navigateToChat = () => {
     path: '/chat',
     query: { landlord: props.house.landlord,
             phone: props.house.phone_num
-    } // 通过query参数传递
+    }
   })
 }
 
@@ -78,7 +76,6 @@ const selectedDate = ref(null);
 const onDateSelected = async (date: string | Date) => {
   console.log("选择的日期是：", date);
 
-  // 从 localStorage 中取 token，解析出当前登录用户名
   const token = localStorage.getItem('token');
   let username = '';
   if (token) {
@@ -97,9 +94,9 @@ const onDateSelected = async (date: string | Date) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        username: username,           // ✅ 从token中取
+        username: username,
         time: date.toISOString(),
-        property: props.house.title   // ✅ 从当前房源取
+        property: props.house.title
       })
     });
 
@@ -116,6 +113,30 @@ const onDateSelected = async (date: string | Date) => {
     alert('提交日期失败，请稍后再试');
   }
 };
+
+// 打开报修弹窗
+const openRepairCard = () => {
+  fixCardStore.setCurrentProperty({
+    id: props.house.id,
+    title: props.house.title,
+    region: `${props.house.region}区${props.house.block}${props.house.community}`,
+    landlord_username: props.house.landlord,
+  })
+  fixCardStore.setFixType('repair')
+  fixCardStore.toggleFixCard()
+}
+
+// 打开投诉弹窗
+const openComplainCard = () => {
+  fixCardStore.setCurrentProperty({
+    id: props.house.id,
+    title: props.house.title,
+    region: `${props.house.region}区${props.house.block}${props.house.community}`,
+    landlord_username: props.house.landlord,
+  })
+  fixCardStore.setFixType('complain')
+  fixCardStore.toggleFixCard()
+}
 
 </script>
 
@@ -141,7 +162,6 @@ const onDateSelected = async (date: string | Date) => {
           </v-carousel-item>
         </v-carousel>
 
-        <!-- 下方缩略图 -->
         <v-row class="mt-3" dense justify="center">
       <v-col
         v-for="(item, index) in detail.photos"
@@ -216,37 +236,74 @@ const onDateSelected = async (date: string | Date) => {
     <div class="d-flex align-center mb-3">
       <v-icon color="primary" class="mr-2">mdi-account</v-icon>
       <span>房东：{{ house.landlord }}（{{ house.phone_num }}）</span>
-
-      <v-chip color="green" 
-                    variant="outlined"
-                    @click="navigateToContract"
-                    style="cursor: pointer">立即签约！</v-chip>
-                    &nbsp;&nbsp;
-      <v-chip color="red" 
-                    variant="outlined"
-                    @click="navigateToChat"
-                    style="cursor: pointer">咨询房东！</v-chip>              
-      <br/>
-
     </div>
-    <div class="d-flex align-center mb-3">
+
+    <!-- 主要操作按钮组 -->
+    <div class="action-buttons mt-4">
       <v-btn
-      color="primary"
-      class="mt-4"
-      large
-      @click="showDatePicker = !showDatePicker"
-    >
-      预约看房
-    </v-btn>
+        color="#4CAF50"
+        size="large"
+        variant="elevated"
+        prepend-icon="mdi-file-sign"
+        @click="navigateToContract"
+        class="action-btn"
+      >
+        立即签约
+      </v-btn>
+
+      <v-btn
+        color="#FF5722"
+        size="large"
+        variant="elevated"
+        prepend-icon="mdi-chat-processing"
+        @click="navigateToChat"
+        class="action-btn"
+      >
+        咨询房东
+      </v-btn>
+
+      <v-btn
+        color="#1976D2"
+        size="large"
+        variant="elevated"
+        prepend-icon="mdi-calendar-clock"
+        @click="showDatePicker = !showDatePicker"
+        class="action-btn"
+      >
+        预约看房
+      </v-btn>
+    </div>
+
+    <!-- 辅助操作按钮组（报修/投诉） -->
+    <div class="secondary-actions mt-3">
+      <v-btn
+        size="small"
+        variant="text"
+        prepend-icon="mdi-tools"
+        @click="openRepairCard"
+        class="secondary-btn"
+      >
+        申报维修
+      </v-btn>
+      <v-btn
+        size="small"
+        variant="text"
+        prepend-icon="mdi-alert-circle-outline"
+        @click="openComplainCard"
+        class="secondary-btn"
+      >
+        投诉房东
+      </v-btn>
+    </div>
 
 
     <!-- 背景遮罩 -->
-  <div 
-    v-if="showDatePicker" 
+  <div
+    v-if="showDatePicker"
     class="date-picker-backdrop"
     @click="showDatePicker = false"
   ></div>
-  
+
   <!-- 日期选择器 -->
   <div v-if="showDatePicker" class="date-picker-container">
     <v-card class="date-picker-card" elevation="10" rounded="lg">
@@ -268,18 +325,8 @@ const onDateSelected = async (date: string | Date) => {
       ></v-date-picker>
     </v-card>
   </div>
-     
-<br>
+
     <v-spacer></v-spacer>
-    <!--<v-btn
-      color="primary"
-      class="mt-4"
-      large
-      @click="onBookVisit"
-    >
-      联系我们
-    </v-btn>-->
-    </div>
   </div>
 </v-col>
 
@@ -293,6 +340,48 @@ const onDateSelected = async (date: string | Date) => {
   color: #e53935;
 }
 
+/* 操作按钮组 */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+.action-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 辅助操作按钮组 */
+.secondary-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.secondary-btn {
+  color: #888 !important;
+  font-size: 0.8rem;
+  transition: color 0.2s;
+}
+
+.secondary-btn:hover {
+  color: #555 !important;
+}
+
 /*日期选择部分浮动设置*/
 .date-picker-overlay {
   position: fixed;
@@ -304,17 +393,16 @@ const onDateSelected = async (date: string | Date) => {
   border-radius: 5px;
 }
 
-
 /* 日期选择器容器 */
 .date-picker-container {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 10000 !important;/* 确保高于其他所有元素 */
+  z-index: 10000 !important;
   width: 90%;
   max-width: 600px;
-  isolation: isolate; /* 创建新的堆叠上下文 */
+  isolation: isolate;
 }
 
 /* 日期选择卡片 */
@@ -332,7 +420,7 @@ const onDateSelected = async (date: string | Date) => {
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 9999; /* 比选择器低1层 */
+  z-index: 9999;
 }
 
 /* 响应式调整 */
@@ -342,6 +430,12 @@ const onDateSelected = async (date: string | Date) => {
   }
   .date-picker-card {
     max-height: 80vh;
+  }
+  .action-buttons {
+    flex-direction: column;
+  }
+  .action-btn {
+    width: 100%;
   }
 }
 </style>
