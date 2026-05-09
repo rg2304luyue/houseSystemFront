@@ -1,4 +1,18 @@
-# .gitignore 文件内容
 node_modules/
 dist/
 .env
+.env.local
+.env.*.local
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+
+# 包管理器（项目使用 npm，不提交 yarn 锁文件）
+yarn.lock

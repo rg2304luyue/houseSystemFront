@@ -22,7 +22,9 @@ export default defineConfig({
       imports: ["vue", "vue-router", "pinia"],
     }),
   ],
-  define: { "process.env": {} },
+  define: {
+    "process.env": JSON.stringify({ NODE_ENV: process.env.NODE_ENV || "production" }),
+  },
   test: {
     globals: true,
     environment: "happy-dom",
@@ -75,8 +77,20 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: { charset: false },
-      css: { charset: false },
     },
   },
-
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // echarts ~1MB，独立 chunk 便于浏览器缓存
+          echarts: ["echarts", "vue-echarts"],
+          // Vuetify ~300KB，独立 chunk
+          vuetify: ["vuetify"],
+          // Vue 全家桶 ~150KB，几乎不更新
+          framework: ["vue", "vue-router", "pinia"],
+        },
+      },
+    },
+  },
 });
