@@ -3,10 +3,10 @@ import { ref } from "vue";
 import axios from "axios";
 import { useRoute } from "vue-router";
 
-import HouseCard1 from "~/src/components/houseDetail/HouseCard1.vue";
-import Newsletter2 from "~/src/components/houseDetail/Newsletter2.vue";
-import Feature5 from "~/src/components/houseDetail/Feature5.vue";
-import HouseFacilities from "~/src/components/houseDetail/HouseFacilities.vue";
+import HouseCard1 from "~/src/components/HouseDetail/HouseCard1.vue";
+import Newsletter2 from "~/src/components/HouseDetail/Newsletter2.vue";
+import Feature5 from "~/src/components/HouseDetail/Feature5.vue";
+import HouseFacilities from "~/src/components/HouseDetail/HouseFacilities.vue";
 import Map from "~/src/components/HouseDetail/Map.vue";
 import { onMounted } from "vue";
 const route = useRoute();

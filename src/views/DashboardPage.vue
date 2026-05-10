@@ -2,7 +2,7 @@
 import { onMounted, ref } from "vue";
 
 // 导入News组件
-import News from "@/components/houseDetail/News.vue";
+import News from "@/components/HouseDetail/News.vue";
 
 // 其它组件导入
 import CategoryCard from "@/components/dashboard/CategoryCard.vue";
