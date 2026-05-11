@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import moment from "moment";
+import dayjs from "dayjs";
 import { useTheme } from "vuetify";
 import { formatCurrency } from "@/utils/formatCurrency";
 import PercentTrend from "@/components/common/PercentTrend.vue";
 
 const formatDate = (date: string) => {
-  return date ? moment(date).format("D MMM") : "";
+  return date ? dayjs(date).format("D MMM") : "";
 };
 
 const props = defineProps({

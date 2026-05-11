@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from "@iconify/vue";
 import { getPublicEventsApi } from "@/api/githubApi";
-import moment from "moment";
+import dayjs from "dayjs";
 const loading = ref(false);
 const username = ref("yangjiakai");
 const activityList = ref([
@@ -181,14 +181,14 @@ onMounted(() => {
             </v-avatar>
           </template>
           <template v-slot:opposite>
-            <span>{{ moment(activity.created_at).format("MM,DD hh:mm") }}</span>
+            <span>{{ dayjs(activity.created_at).format("MM,DD hh:mm") }}</span>
           </template>
           <div class="mb-1">
             <span class="text-h6 font-weight-bold">
               {{ activity.user }}
             </span>
             <span class="ml-2 text-grey">{{
-              moment(activity.created_at).format("MM,DD hh:mm")
+              dayjs(activity.created_at).format("MM,DD hh:mm")
             }}</span>
           </div>
 

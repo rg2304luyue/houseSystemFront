@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed,onMounted } from "vue"; // computed 可能不再需要，除非有其他计算属性
-import moment from "moment";
+import dayjs from "dayjs";
 import { formatFileSize } from "@/utils/common";
 import AnimationUpload from "./AnimationUploadPage.vue";
 import axios from "axios";
@@ -97,7 +97,7 @@ const processNewFiles = async (newlySelectedFiles: File[]) => {
             imageSize: `${img.width}x${img.height}`,
             type: file.type,
             suffix: file.name.split(".").pop() || "",
-            lastModifiedDate: moment(file.lastModified).format("YYYY-MM-DD HH:mm:ss"),
+            lastModifiedDate: dayjs(file.lastModified).format("YYYY-MM-DD HH:mm:ss"),
             link: reader.result, // Base64 Data URL for <v-img src>
             rawFile: file, // Keep reference to original File object
             previewEnabled: true,
@@ -112,7 +112,7 @@ const processNewFiles = async (newlySelectedFiles: File[]) => {
             imageSize: "N/A",
             type: file.type,
             suffix: file.name.split(".").pop() || "",
-            lastModifiedDate: moment(file.lastModified).format("YYYY-MM-DD HH:mm:ss"),
+            lastModifiedDate: dayjs(file.lastModified).format("YYYY-MM-DD HH:mm:ss"),
             link: null, // Or a placeholder error image URL
             rawFile: file,
             previewEnabled: false,
