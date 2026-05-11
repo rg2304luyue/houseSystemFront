@@ -26,12 +26,6 @@ const primaryColors = ref([
     colorValue: "#344767",
   },
 ]);
-//购物车
-import { useCartStore } from '@/stores/cartStore';
-const cartStore = useCartStore();  // 使用购物车 store
-const cartitems =cartStore.cartItems;
-const cartTotal = computed(() => cartStore.cartTotal);
-
 //订单
 const editedItem = ref({
   userid: "ACID",
@@ -68,8 +62,6 @@ const profileStore = useProfileStore();
 const authStore = useAuthStore();
 const account = reactive({ ...profileStore.account });
 const proceedToPay = () => {
-  cartStore.submitCart(); // 提交购物车
-
   // 从用户信息中填入姓名
   const { account } = profileStore;
   editedItem.value.userid = account.userid;
@@ -145,29 +137,6 @@ const updatePrimaryColor = (newColor: Color) => {
           <div>See our items options.</div>
         </div>
 
-        <hr class="my-6" />
-        <div class="theme-area">
-          <!-- <b>Global Theme Mode</b> -->
-          <v-data-table
-            :items="cartitems"
-            hide-default-footer
-            :pagination="false">
-          </v-data-table>
-
-        </div>
-        <hr class="my-6" />
-        <hr class="my-6" />
-        <div class="">
-          <h2><b>TotalPrice:¥{{ cartTotal.toFixed(2) }}</b></h2>
-
-        </div>
-        <hr class="mb-6" />
-        <div>
-          <v-btn color="" class="gradient info" block size="large"
-          @click="proceedToPay">
-            Proceed To Checkout</v-btn
-          >
-        </div>
         <div class="ml-5 mt-5 d-flex align-center">
           <v-icon color="primary" class="mr-6">mdi-email-outline</v-icon>
           <a href="mailto:yjkbako@gmail.com">yjkbako@gmail.com</a>
@@ -314,7 +283,7 @@ const updatePrimaryColor = (newColor: Color) => {
                             v-model="editedItem.totalprice"
                             disabled
                             label="Total Price"
-                    >${{cartTotal.toFixed(2)}}</v-text-field>
+                    ></v-text-field>
                   </v-col>
                 </v-row>
               </v-container>

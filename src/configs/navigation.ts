@@ -1,8 +1,3 @@
-
-import menuLanding from "./menus/landing.menu";
-import menuUI from "./menus/ui.menu";
-import menuPages from "./menus/pages.menu";
-
 export default {
   menu: [
     {
@@ -39,43 +34,16 @@ export default {
           icon: "mdi-home-outline",
         },
         {
-          text: "新闻管理",
-          link: "/news",
-          icon: "mdi-newspaper",
-        },
-        {
-          text: "新闻编辑",
-          link: "/newsEditor",
-          icon: "mdi-file-document-edit-outline",
-        },
-        {
           icon: "mdi-robot-excited-outline",
           text: "AI选购顾问",
           link: "/ai/chatbot_v1",
         },
         {
-          icon: "mdi-robot-outline",
-          text: "Image Bot",
-          link: "/image-bot",
+          icon: "mdi-chat-outline",
+          text: "即时通讯",
+          link: "/chat",
         },
       ],
     },
-
-    // {
-    //   text: "Landing",
-    //   items: [
-    //     ...menuLanding,
-
-    //   ],
-    // },
-    // {
-    //   text: "UI - Theme Preview",
-    //   items: menuUI,
-    // },
-    // {
-    //   text: "Pages",
-    //   items: menuPages,
-    // },
-
   ],
 };

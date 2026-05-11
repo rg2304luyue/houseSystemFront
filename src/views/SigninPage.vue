@@ -21,8 +21,8 @@ const refEmailForm = ref();
 const refEmailCodeForm = ref();
 
 // 表单数据
-const phone = ref("19511053624");
-const password = ref("123456");
+const phone = ref("");
+const password = ref("");
 const email = ref("");
 const emailPassword = ref("");
 const emailForCode = ref("");

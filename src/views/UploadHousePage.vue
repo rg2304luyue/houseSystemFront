@@ -2,7 +2,7 @@
 import { ref, computed,onMounted } from "vue"; // computed 可能不再需要，除非有其他计算属性
 import dayjs from "dayjs";
 import { formatFileSize } from "@/utils/common";
-import AnimationUpload from "./AnimationUploadPage.vue";
+import AnimationUpload from "@/components/house/AnimationUpload.vue";
 import axios from "axios";
 
 // 解决 window.grecaptcha 类型报错
@@ -155,7 +155,6 @@ const features = ref([
 ]);
 //消息条
 import { useSnackbarStore } from "@/stores/snackbarStore";
-import { s } from "vitest/dist/types-e3c9754d";
 const snackbarStore = useSnackbarStore();
 //房屋信息
 const house_detail = ref({ 

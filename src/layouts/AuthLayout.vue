@@ -5,10 +5,10 @@
     >
       <div class="mt-3 mt-md-10 pa-2">
         <div class="text-primary text-h4 font-weight-bold">
-          MyPetStore
+          好客租房
         </div>
         <div class="title my-2">
-          Welcome! Let's shopping amazing things together.
+          欢迎回来！找到你的理想住所。
         </div>
       </div>
     </v-sheet>

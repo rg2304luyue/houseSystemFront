@@ -10,9 +10,7 @@ import CopyBtn from "@/components/common/CopyBtn.vue";
 import { useDisplay } from "vuetify";
 import { read } from "@/utils/aiUtils";
 import { useSnackbarStore } from "@/stores/snackbarStore";
-import { useSpeechStore } from "@/stores/speechStore";
 import { Icon } from "@iconify/vue";
-const speechStore = useSpeechStore();
 const snackbarStore = useSnackbarStore();
 const chatGPTStore = useChatGPTStore();
 const langs = [
@@ -191,11 +189,6 @@ const record = () => {
 const dialog = ref(false);
 const { xs } = useDisplay();
 
-const readText = () => {
-  if (targetContent.value) {
-    speechStore.ssmlToSpeak(targetContent.value);
-  }
-};
 </script>
 
 <template>
@@ -357,16 +350,6 @@ const readText = () => {
                 <v-card-actions
                   class="bg-grey-lighten-4 bg-grey-lighten-4 text-primary"
                 >
-                  <v-tooltip
-                    location="bottom"
-                    :text="$t('toolbox.translationAssistant.read')"
-                  >
-                    <template #activator="{ props }">
-                      <v-btn @click="readText" v-bind="props" icon
-                        ><v-icon>mdi-volume-high</v-icon>
-                      </v-btn>
-                    </template>
-                  </v-tooltip>
                   <v-spacer></v-spacer>
                   <CopyBtn :text="targetContent" />
                 </v-card-actions> </v-card

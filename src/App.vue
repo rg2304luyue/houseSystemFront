@@ -17,7 +17,6 @@ import { Icon } from "@iconify/vue";
 
 import UILayout from "@/layouts/UILayout.vue";
 import LandingLayout from "@/layouts/LandingLayout.vue";
-import DefaultLayout from "@/layouts/DefaultLayout.vue";
 import AuthLayout from "@/layouts/AuthLayout.vue";
 import CustomizationMenu from "@/components/CustomizationMenu.vue";
 import { useCustomizeThemeStore } from "@/stores/customizeTheme";
@@ -36,18 +35,17 @@ const isRouterLoaded = computed(() => {
 });
 
 const layouts = {
-  default: DefaultLayout,
   ui: UILayout,
   landing: LandingLayout,
   auth: AuthLayout,
 };
 
-type LayoutName = "default" | "ui" | "landing" | "auth" | "error";
+type LayoutName = "ui" | "landing" | "auth" | "error";
 
 const currentLayout = computed(() => {
   const layoutName = route.meta.layout as LayoutName;
   if (!layoutName) {
-    return DefaultLayout;
+    return LandingLayout;
   }
   return layouts[layoutName];
 });

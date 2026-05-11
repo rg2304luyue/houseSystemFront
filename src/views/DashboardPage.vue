@@ -5,7 +5,6 @@ import { onMounted, ref } from "vue";
 import News from "@/components/HouseDetail/News.vue";
 
 // 其它组件导入
-import CategoryCard from "@/components/dashboard/CategoryCard.vue";
 import BannerPage from "@/components/dashboard/BannerPage.vue";
 import Footer1 from "@/components/footer/Footer1.vue";
 import HouseCard from "~/src/components/dashboard/HouseCard.vue";

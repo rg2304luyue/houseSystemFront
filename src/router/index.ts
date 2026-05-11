@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
 
-import LandingRoutes from "./landing.routes";
 import AuthRoutes from "./auth.routes";
 
 export const routes = [
@@ -41,38 +40,6 @@ export const routes = [
       layout: "landing",
     },
     component: () => import("@/views/AdminPanelPage.vue"),
-  },
-  //富文本编辑器
-  {
-    path: "/newsEditor",
-    component: () => import("@/views/NewsEditorPage.vue"),
-    meta: {
-      requiresAuth: true,
-      layout: "landing",
-      category: "Data",
-      title: "RichTextEditor",
-    },
-  },
-  {
-    path: "/newsList",
-    component: () => import("@/views/NewsListPage.vue"),
-    meta: {
-      requiresAuth: true,
-      layout: "landing",
-      category: "Data",
-      title: "NewsList",
-    },
-  },
-  //新闻详情页
-  {
-    path: "/newsDetail/:id",
-    component: () => import("@/views/NewsDetailPage.vue"),
-    meta: {
-      requiresAuth: true,
-      layout: "landing",
-      category: "Data",
-      title: "NewsDetail",
-    },
   },
   //房东发布房源界面：
   {
@@ -124,14 +91,6 @@ export const routes = [
     },
     component: () => import("@/views/UserManagePage.vue"),
   },
-    {
-    path: "/news",
-    meta: {
-      requiresAuth: true,
-      layout: "landing",
-    },
-    component: () => import("@/views/NewsManagerPage.vue"),
-  },
   {
     path: "/ai/chatbot_v1",
     component: () => import("@/views/ChatBotPage.vue"),
@@ -140,17 +99,6 @@ export const routes = [
       layout: "landing",
       // category: "AI",
       title: "ChatBotV1",
-    },
-  },
-  // image bot
-  {
-    path: "/image-bot",
-    component: () => import("@/views/ImageBotPage.vue"),
-    meta: {
-      requiresAuth: true,
-      layout: "landing",
-      // category: "AI",
-      // title: "ImageBot",
     },
   },
 
@@ -172,22 +120,7 @@ export const routes = [
     component: () =>
       import(/* webpackChunkName: "error" */ "@/views/NotFoundPage.vue"),
   },
-  // lottie Animation
-  {
-    path: "/ui/lottie-animation",
-    name: "ui-lottie-animation",
-    component: () =>
-      import(
-        /* webpackChunkName: "ui-lottie-animation" */ "@/views/LottieAnimationPage.vue"
-      ),
-    meta: {
-      requiresAuth: true,
-      layout: "ui",
-      category: "UI",
-      title: "LottieAnimation",
-    },
-
-  },{
+{
       path: "/chat",
       meta: {
         requiresAuth: true,
@@ -236,7 +169,6 @@ export const routes = [
       component: () => import("@/views/ResetPasswordPage.vue"),
     },
 
-  ...LandingRoutes,
   ...AuthRoutes,
 
 

@@ -17,7 +17,6 @@ const openGithubSite = () => {
 };
 
 onMounted(() => {
-  console.log('User Type:', userType.value);
   scrollToBottom();
 });
 
