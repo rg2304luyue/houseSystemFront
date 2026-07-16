@@ -59,10 +59,12 @@ export const useAuthStore = defineStore("auth", {
         if (response.data.code === 201) {
           router.push("/auth/signin");
         } else {
-          console.error("注册失败：", response.data.message);
+          throw new Error(response.data.message || "Registration failed");
         }
       } catch (error: any) {
-        console.error("请求异常：", error?.response?.data?.message || error.message);
+        const errorMsg = error?.response?.data?.message || error.message || "Registration failed";
+        console.error("请求异常：", errorMsg);
+        throw new Error(errorMsg);
       }
     },
 

@@ -15,7 +15,7 @@
       <template #item.price="{ item }">￥{{ item.price }}</template>
       <template #item.actions="{ item, index }">
         <v-btn variant="text" color="primary" size="small" @click="openForm(item, index)">编辑</v-btn>
-        <v-btn variant="text" color="error" size="small" @click="confirmDelete(index)">删除</v-btn>
+        <v-btn variant="text" color="error" size="small" @click="confirmDelete(item)">删除</v-btn>
       </template>
     </v-data-table>
 
@@ -130,8 +130,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useSnackbarStore } from '@/stores/snackbarStore'
 import apiClient from '@/api/client'
+import { useProfileStore } from '@/stores/profileStore'
 
 const snackbar = useSnackbarStore()
+const profileStore = useProfileStore()
 
 const headers = [
   { title: '房源编号', key: 'house_num', width: 80 },
@@ -151,14 +153,18 @@ const requiredRule = (v) => !!v || '此项为必填项'
 
 const properties = ref([])
 
-onMounted(async () => {
+const loadProperties = async () => {
   try {
-    const res = await apiClient.get('/houseinfo')
-    properties.value = Array.isArray(res.data.data?.items) ? res.data.data.items : []
+    const res = await apiClient.post('/houseinfo/landlord', {
+      username: profileStore.user?.name
+    })
+    properties.value = Array.isArray(res.data.data) ? res.data.data : []
   } catch (error) {
     snackbar.showErrorMessage('加载房源数据失败')
   }
-})
+}
+
+onMounted(loadProperties)
 
 const showForm = ref(false)
 const editIndex = ref(null)
@@ -166,6 +172,7 @@ const formRef = ref(null)
 
 const form = ref({
   house_num: '',
+  id: null,
   title: '',
   region: '',
   block: '',
@@ -194,6 +201,7 @@ const dialogWidth = computed(() => {
 function resetForm() {
   Object.assign(form.value, {
     house_num: '',
+    id: null,
     title: '',
     region: '',
     block: '',
@@ -238,34 +246,19 @@ async function saveProperty() {
   if (!valid.valid) return
 
   try {
-    const formData = new FormData()
-    for (const key in form.value) {
-      if (key === 'photos' || key === 'videos') {
-        const files = form.value[key]
-        if (Array.isArray(files)) {
-          files.forEach((f) => formData.append(key + '[]', f))
-        }
-      } else {
-        formData.append(key, form.value[key] ?? '')
-      }
-    }
+    const { photos, videos, ...houseData } = form.value
 
     const url = editIndex.value !== null
-      ? `/houseinfo/${form.value.house_num || ''}`
+      ? `/houseinfo/${form.value.id}`
       : '/houseinfo'
     const method = editIndex.value !== null ? 'put' : 'post'
 
-    await apiClient[method](url, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+    await apiClient[method](url, houseData, {
+      headers: { 'Content-Type': 'application/json' }
     })
 
-    if (editIndex.value !== null) {
-      properties.value[editIndex.value] = { ...form.value }
-      snackbar.showSuccessMessage('房源更新成功')
-    } else {
-      properties.value.push({ ...form.value })
-      snackbar.showSuccessMessage('房源添加成功')
-    }
+    snackbar.showSuccessMessage(editIndex.value !== null ? '房源更新成功' : '房源添加成功')
+    await loadProperties()
     closeForm()
   } catch (err) {
     snackbar.showErrorMessage(err.message || '保存失败')
@@ -273,16 +266,23 @@ async function saveProperty() {
 }
 
 const showDeleteConfirm = ref(false)
-const deleteIndex = ref(null)
+const selectedProperty = ref(null)
 
-function confirmDelete(index) {
-  deleteIndex.value = index
+function confirmDelete(property) {
+  selectedProperty.value = property
   showDeleteConfirm.value = true
 }
 
-function doDelete() {
-  properties.value.splice(deleteIndex.value, 1)
-  snackbar.showSuccessMessage('删除成功')
-  showDeleteConfirm.value = false
+async function doDelete() {
+  if (!selectedProperty.value?.id) return
+  try {
+    await apiClient.delete(`/houseinfo/${selectedProperty.value.id}`)
+    await loadProperties()
+    snackbar.showSuccessMessage('删除成功')
+    showDeleteConfirm.value = false
+    selectedProperty.value = null
+  } catch (error) {
+    snackbar.showErrorMessage(error?.response?.data?.message || '删除失败')
+  }
 }
 </script>

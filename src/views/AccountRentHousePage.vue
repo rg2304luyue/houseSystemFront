@@ -7,7 +7,7 @@
 import { useProfileStore } from "@/stores/profileStore";
 import { useFixCardStore } from "@/stores/fixCardStore";
 import { ref, computed, onMounted } from "vue";
-import axios from "axios";
+import apiClient from "@/api/client";
 
 import contract from "@/components/HouseRentCotract.vue";
 const showContractDialog = ref(false);
@@ -47,7 +47,7 @@ const fetchRentalProperties = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const response = await axios.get(`/rental/tenants/${currentUser.value}`);
+    const response = await apiClient.get(`/rental/tenants/${currentUser.value}`);
     if (response.data.success && response.data.code === 200) {
       // 转换数据格式并计算状态
       rentalProperties.value = response.data.data.map(property => {

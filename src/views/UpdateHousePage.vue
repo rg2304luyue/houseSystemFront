@@ -3,7 +3,7 @@ import { ref, computed,onMounted } from "vue"; // computed 可能不再需要，
 import dayjs from "dayjs";
 import { formatFileSize } from "@/utils/common";
 import AnimationUpload from "@/components/house/AnimationUpload.vue";
-import axios from "axios";
+import apiClient from "@/api/client";
 
 //导入路由
 import { useRoute } from 'vue-router';
@@ -28,7 +28,7 @@ declare global {
 //获取函数
 const fetchHouse = async () => {
   try {
-    const { data } = await axios.get(`/houseinfo/${id}`);
+    const { data } = await apiClient.get(`/houseinfo/${id}`);
     Object.assign(house_info.value, data.data);
   } catch (e) {
     snackbarStore.showErrorMessage('获取房屋信息失败');
@@ -37,7 +37,7 @@ const fetchHouse = async () => {
 
 const fetchHouseDetail = async () => {
   try {
-    const { data } = await axios.get(`/housedetail/${id}`);
+    const { data } = await apiClient.get(`/housedetail/${id}`);
     Object.assign(house_detail.value, data.data);
   } catch (e) {
     snackbarStore.showErrorMessage('获取房屋详情失败');
@@ -308,38 +308,15 @@ const uploadNewHouse = async () => {
   let uploadedImageUrlsFromServer: string[] = [];
   // 步骤1: 上传所有图片 (allRawFiles) 到批量接口
   if (allRawFiles.value.length > 0) {
-    const formData = new FormData();
-    allRawFiles.value.forEach(file => {
-      formData.append('detail_images', file, file.name); 
-    });
-
-    try {
-      const response = await axios.post('/oss/upload_property_detail_images', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      if (response.data.success && response.data.photo_urls && Array.isArray(response.data.photo_urls)) {
-        uploadedImageUrlsFromServer = response.data.photo_urls;
-        console.log("图片批量上传成功，返回的URL列表:", uploadedImageUrlsFromServer);
-      } else {
-        console.error("图片批量上传失败，响应数据格式不正确:", response.data);
-        snackbarStore.showErrorMessage(`图片批量上传失败: ${response.data.message || '未知错误'}`);
-        isSubmitting.value = false;
-        return; // 中断后续操作
-      }
-    } catch (error) {
-      console.error("请求图片批量上传接口错误:", error);
-      console.error("错误详情:", error.response?.data || error.message);
-      snackbarStore.showErrorMessage(`图片批量上传请求失败: ${error.response?.data?.message || error.message || '请检查网络或联系管理员。'}`);
-      isSubmitting.value = false;
-      return; // 中断后续操作
-    }
-  } else {
-    console.log("没有选择新图片进行上传。");
-  
+    snackbarStore.showErrorMessage('当前后端未提供图片更新接口，请移除新选择的图片后再保存。');
+    isSubmitting.value = false;
+    return;
   }
 
   // 步骤2: 准备 house_info 数据
-  const coverImageUrl = uploadedImageUrlsFromServer.length > 0 ? uploadedImageUrlsFromServer[0] : ""; // 强制第一张为封面，如果没有上传则为空字符串
+  const coverImageUrl = uploadedImageUrlsFromServer.length > 0
+    ? uploadedImageUrlsFromServer[0]
+    : house_info.value.image_url || "";
   
   const finalHouseInfoData = {
     ...house_info.value, // 展开你的表单数据
@@ -381,10 +358,11 @@ const uploadNewHouse = async () => {
 
   // 步骤5: 调用创建完整房源接口
   try {
-    const response = await axios.put(`/houseinfo/${id}/full_update`, finalPayload);
+    const response = await apiClient.put(`/houseinfo/${id}`, finalHouseInfoData);
     if (response.data.success) {
+      const updatedHouseId = response.data?.data?.id ?? id;
       console.log("房源更新成功，返回数据:", response.data);
-      snackbarStore.showSuccessMessage(`房源更新成功! ID: ${response.data.data.house_info.id}`);
+      snackbarStore.showSuccessMessage(`房源基础信息更新成功! ID: ${updatedHouseId}`);
       setTimeout(() => {
       router.push('/'); // <-- 4. 3秒后跳转到新闻列表页
     }, 3000);

@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { useAuthStore } from "@/stores/authStore";
+import { useProfileStore } from "@/stores/profileStore";
 
 import AuthRoutes from "./auth.routes";
 
@@ -37,6 +39,7 @@ export const routes = [
     path: "/admin",
     meta: {
       requiresAuth: true,
+      roles: [0],
       layout: "landing",
     },
     component: () => import("@/views/AdminPanelPage.vue"),
@@ -46,6 +49,7 @@ export const routes = [
     path: "/landlordUpload",
     meta: {
       requiresAuth: true,
+      roles: [0, 2],
       layout: "landing",
     },
     component: () => import("@/views/UploadHousePage.vue"),
@@ -54,6 +58,7 @@ export const routes = [
     path: "/landlordUpdate/:id",
     meta: {
       requiresAuth: true,
+      roles: [0, 2],
       layout: "landing",
     },
     component: () => import("@/views/UpdateHousePage.vue"),
@@ -63,6 +68,7 @@ export const routes = [
     path: "/myHouse",
     meta: {
       requiresAuth: true,
+      roles: [0, 2],
       layout: "landing",
     },
     component: () => import("@/views/MyHousePage.vue"),
@@ -79,6 +85,7 @@ export const routes = [
     path: "/landlord",
     meta: {
       requiresAuth: true,
+      roles: [0, 2],
       layout: "landing",
     },
     component: () => import("@/views/LandlordPropertiesPage.vue"),
@@ -87,6 +94,7 @@ export const routes = [
     path: "/userManage",
     meta: {
       requiresAuth: true,
+      roles: [0],
       layout: "landing",
     },
     component: () => import("@/views/UserManagePage.vue"),
@@ -190,6 +198,23 @@ const router = createRouter({
       return { top: 0 };
     }
   },
+});
+
+router.beforeEach((to) => {
+  const authStore = useAuthStore();
+  if (to.matched.some((record) => record.meta.requiresAuth) && !authStore.isAuthenticated) {
+    return { name: "auth-signin", query: { redirect: to.fullPath } };
+  }
+
+  const allowedRoles = to.meta.roles as number[] | undefined;
+  if (allowedRoles) {
+    const profileStore = useProfileStore();
+    if (!allowedRoles.includes(Number(profileStore.user?.userType))) {
+      return { path: "/dashboard" };
+    }
+  }
+
+  return true;
 });
 
 export default router;

@@ -4,7 +4,7 @@ import { useAuthStore } from "@/stores/authStore";
 
 const authStore = useAuthStore();
 const username = ref("");
-const phone = ref("19511053623");
+const phone = ref("");
 // sign in buttons
 const isLoading = ref(false);
 const isSignInDisabled = ref(false);
@@ -23,7 +23,15 @@ const handleRegister = async () => {
   if (valid) {
     isLoading.value = true;
     isSignInDisabled.value = true;
-    authStore.registerWithUsernameAndPassword(phone.value, password.value, email.value);
+    try {
+      await authStore.registerWithUsernameAndPassword(phone.value, password.value, email.value);
+    } catch (err: any) {
+      error.value = true;
+      errorMessages.value = err?.message || "Register failed";
+    } finally {
+      isLoading.value = false;
+      isSignInDisabled.value = false;
+    }
   } else {
     console.log("no");
   }

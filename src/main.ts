@@ -26,15 +26,14 @@ const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);
 const app = createApp(App);
 
+app.use(pinia);
 app.use(router);
 app.use(PerfectScrollbar);
 app.use(MasonryWall);
 app.use(VueVirtualScroller);
 app.use(VueApexCharts);
-app.use(pinia);
 app.use(i18n);
 app.use(Vue3Lottie, { name: "LottieAnimation" });
 app.use(autoAnimatePlugin);
 app.use(vuetify);
 app.mount("#app");
-

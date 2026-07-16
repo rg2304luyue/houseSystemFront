@@ -145,6 +145,7 @@ const isSubmitting = ref(false)
 const submitContract = async () => {
   try {
     isSubmitting.value = true
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || localStorage.getItem('userToken')
     
     // 准备完整的数据对象
     const payload = {
@@ -164,6 +165,7 @@ const submitContract = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token.replace(/^"|"$/g, '')}` } : {}),
       },
       body: JSON.stringify(payload)
     })
@@ -182,9 +184,10 @@ const submitContract = async () => {
 
     const payResponse = await fetch('/api/alipay/pay', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token.replace(/^"|"$/g, '')}` } : {}) },
       body: JSON.stringify({
         out_trade_no: `CONTRACT_${contractId}_${Date.now()}`,
+        contract_id: contractId,
         total_amount: totalAmount,
         subject: `租房合同支付-${props.property.landlord_username || '房东'}`
       })

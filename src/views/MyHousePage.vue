@@ -4,7 +4,7 @@
 * @Description: 房东房源管理列表页面
 -->
 <script setup lang="ts">
-import axios from 'axios';
+import apiClient from '@/api/client';
 import { useRouter } from 'vue-router';
 import { useProfileStore } from '@/stores/profileStore';
 import * as XLSX from 'xlsx';
@@ -23,7 +23,7 @@ interface HouseItem {
   direction: string;
   house_num: string;
   image_url: string;
-  isavailable: number;
+  available: number;
   landlord: string;
   page_views: number | null;
   phone_num: string;
@@ -56,17 +56,14 @@ const landlordName = computed(() => profileStore.user.name || 'Lappand');
 const fetchHouses = async () => {
   loading.value = true;
   try {
-    const response = await axios.get('/houseinfo/by_landlord', {
-      params: {
-        name: landlordName.value,
-        page: currentPage.value
-      }
+    const response = await apiClient.post('/houseinfo/landlord', {
+      username: profileStore.user?.name
     });
     
     if (response.data.code === 200) {
-      houses.value = response.data.data.items;
-      totalPages.value = response.data.data.pages;
-      totalItems.value = response.data.data.total;
+      houses.value = Array.isArray(response.data.data) ? response.data.data : [];
+      totalPages.value = 1;
+      totalItems.value = houses.value.length;
     }
   } catch (error) {
     console.error('获取房源列表失败:', error);
@@ -80,15 +77,15 @@ const fetchHouses = async () => {
 
 // 切换房源状态
 const toggleAvailability = async (house: HouseItem) => {
-  const newVal = house.isavailable === 1 ? 0 : 1;
+  const newVal = house.available === 1 ? 0 : 1;
   try {
     // >>> 调用后端 PUT 接口
-    await axios.put(`/houseinfo/${house.id}/isavailable`, {
-      isavailable: newVal
+    await apiClient.put(`/houseinfo/${house.id}`, {
+      available: newVal
     });
     // <<<
 
-    house.isavailable = newVal;               // 乐观更新
+    house.available = newVal;                 // 乐观更新
     snackbar.show    = true;
     snackbar.message = newVal ? '房源已上架' : '房源已下架';
     snackbar.color   = 'success';
@@ -155,7 +152,7 @@ const snackbar = reactive({
 // 统计信息
 const statistics = computed(() => {
   const total = houses.value.length;
-  const available = houses.value.filter(h => h.isavailable === 1).length;
+  const available = houses.value.filter(h => h.available === 1).length;
   const unavailable = total - available;
   const totalViews = houses.value.reduce((sum, h) => sum + (h.page_views || 0), 0);
   
@@ -182,7 +179,7 @@ const exportToExcel = () => {
       '租金(元/月)': house.price,
       '出租方式': house.rent_type,
       '装修情况': house.decoration,
-      '状态': house.isavailable === 1 ? '已上架' : '已下架',
+      '状态': house.available === 1 ? '已上架' : '已下架',
       '近地铁': house.subway === 1 ? '是' : '否',
       '浏览量': house.page_views || 0,
       '发布时间': house.publish_time,
@@ -426,15 +423,15 @@ onMounted(() => {
                       
                       <!-- 上下架状态切换 -->
                       <v-chip
-                        :color="house.isavailable === 1 ? 'success' : 'error'"
+                        :color="house.available === 1 ? 'success' : 'error'"
                         variant="elevated"
                         @click.stop="toggleAvailability(house)"
                         rounded="sm"
                       >
                         <v-icon start>
-                          {{ house.isavailable === 1 ? 'mdi-check-circle' : 'mdi-close-circle' }}
+                          {{ house.available === 1 ? 'mdi-check-circle' : 'mdi-close-circle' }}
                         </v-icon>
-                        {{ house.isavailable === 1 ? '已上架' : '已下架' }}
+                        {{ house.available === 1 ? '已上架' : '已下架' }}
                       </v-chip>
                                        
                         <v-chip 
