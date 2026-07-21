@@ -70,26 +70,9 @@ const truncateMessage = (message: string | null, maxLength = 80) => {
 // 5. 获取日志数据的函数
 const fetchLogs = async () => {
   loading.value = true;
-  try {
-    // 你可以添加分页参数 ?page=1&per_page=20 等
-    const response = await fetch("/admin/logs");
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const result = await response.json();
-    if (result.success && result.data && Array.isArray(result.data.logs)) {
-      logItems.value = result.data.logs;
-      // console.log('Fetched logs:', logItems.value); // 调试用
-    } else {
-      console.error("Failed to fetch logs or data format incorrect:", result);
-      logItems.value = [];
-    }
-  } catch (error) {
-    console.error("Error fetching logs:", error);
-    logItems.value = [];
-  } finally {
-    loading.value = false;
-  }
+  // FastAPI 暂未提供管理员日志接口，本地页面静态降级为空列表。
+  logItems.value = [];
+  loading.value = false;
 };
 
 // 6. 打开日志详情弹窗的函数

@@ -5,20 +5,18 @@
 -->
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from "vue";
-import { useRoute } from "vue-router";
 import { useSnackbarStore } from "@/stores/snackbarStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { MdPreview } from "md-editor-v3";
 import "md-editor-v3/lib/preview.css";
-import axios from "axios";
+import apiClient from "@/api/client";
 
-const route = useRoute();
+const props = defineProps<{ houseId: number | string }>();
 const snackbarStore = useSnackbarStore();
 const profileStore = useProfileStore();
 
-// 计算属性获取houseId，如果没有则默认为1
 const houseId = computed(() => {
-  return route.params.houseId?.toString() || "1";
+  return String(props.houseId);
 });
 
 interface Message {
@@ -40,16 +38,15 @@ const isLoading = ref(false);
 const loadMessages = async () => {
   isLoading.value = true;
   try {
-    const response = await axios.get(`/comments/${houseId.value}`);
-    
-    // 处理空数据情况
-    if (!response.data?.data) {
+    const response = await apiClient.get(`/houses/${houseId.value}/comments`);
+
+    // 响应拦截器已解包，response.data 直接是留言数组
+    const rawMessages = Array.isArray(response.data) ? response.data : [];
+    if (rawMessages.length === 0) {
       messages.value = [];
       return;
     }
 
-    // 转换数据格式
-    const rawMessages = Array.isArray(response.data.data) ? response.data.data : [];
     messages.value = rawMessages.map((comment: any) => ({
       id: comment.comment_id,
       content: comment.desc,
@@ -68,9 +65,9 @@ const loadMessages = async () => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     // 404错误视为无留言，不显示错误提示
-    if (axios.isAxiosError(error) && error.response?.status !== 404) {
+    if (error.response?.status !== 404) {
       console.error("加载留言失败:", error);
       snackbarStore.showErrorMessage("加载留言失败，请稍后重试");
     }
@@ -93,7 +90,7 @@ const submitMessage = async () => {
   }
 
   try {
-    const response = await axios.post("/comments", {
+    const response = await apiClient.post(`/houses/${houseId.value}/comments`, {
       house_id: parseInt(houseId.value),
       username: currentUser.value,
       type: 1,
@@ -101,15 +98,16 @@ const submitMessage = async () => {
       at: null
     });
 
-    if (response.status === 201) {
-      const newComment = response.data.data;
+    if (response.status >= 200 && response.status < 300) {
+      // 响应拦截器已解包，response.data 直接是新留言对象
+      const newComment = response.data;
       messages.value.unshift({
         id: newComment.comment_id,
         content: newComment.desc,
         username: newComment.username,
         timestamp: newComment.time
       });
-      
+
       newMessage.value = "";
       snackbarStore.showSuccessMessage("留言已提交，感谢您的反馈！");
     }

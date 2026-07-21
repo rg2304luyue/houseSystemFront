@@ -10,12 +10,13 @@ import { Icon } from "@iconify/vue";
 import { ref, computed } from 'vue';
 import { formatIdCard } from '@/utils/formatIdCard';
 import { useRouter } from 'vue-router';
-import axios from 'axios'; // 引入 axios
+import apiClient from "@/api/client";
 
 import { useSnackbarStore } from "~/src/stores/snackbarStore";
 const snackbarStore = useSnackbarStore();
 //图像裁剪
 import AvatarCropper from '~/src/components/User/AvatarCropper.vue'; 
+import defaultAvatar from "@/assets/images/avatars/avatar_user.jpg";
 const isCropperOpen = ref(false);
 // 3. 准备处理上传的函数，它会接收子组件传来的 blob 和 done 回调
 const onAvatarUpload = async (blob: Blob, done: () => void) => {
@@ -23,46 +24,22 @@ const onAvatarUpload = async (blob: Blob, done: () => void) => {
   // 1. 将收到的 Blob 包装成 File 对象，准备上传到OSS
   const avatarFile = new File([blob], "avatar.jpg", { type: "image/jpeg" });
   const ossFormData = new FormData();
-  ossFormData.append("image", avatarFile); // 后端OSS接口接收的字段名叫 'image'
+  ossFormData.append("avatar", avatarFile);
   try {
     // --- 步骤 1: 上传图片到 OSS 接口 ---
     console.log("步骤1: 正在上传图片到OSS...");
-    const ossResponse = await axios.post(
-      '/oss/upload_general_image',
+    const ossResponse = await apiClient.post(
+      '/users/me/avatar',
       ossFormData,
       {
         headers: { 'Content-Type': 'multipart/form-data' }
       }
     );
 
-    if (!ossResponse.data || !ossResponse.data.success) {
-      // 如果oss上传失败，则直接抛出错误
-      throw new Error(ossResponse.data.message || '图片服务器上传失败');
-    }
-
-    const newAvatarUrl = ossResponse.data.image_url;
+    const newAvatarUrl = ossResponse.data.avatarUrl;
     console.log("步骤1成功: 获取到新的OSS URL:", newAvatarUrl);
 
-    // --- 步骤 2: 将新的 OSS URL 更新到用户信息中 ---
-    console.log("步骤2: 正在更新用户信息...");
-    const userId = profileStore.getUserId(); // 从你的 store 获取用户ID
-    console.log("用户ID:", userId);
-    // 准备只包含头像信息的 payload
-    const userInfoPayload = {
-      id: userId,
-      avatarUrl: newAvatarUrl // 你的用户表里字段名可能是 avatarUrl
-    };
-
-    const userUpdateResponse = await axios.put(
-      '/user/userinfo',
-      userInfoPayload
-    );
-
-    if (!userUpdateResponse.data || !userUpdateResponse.data.success) {
-        throw new Error(userUpdateResponse.data.message || '更新用户信息失败');
-    }
-    
-    // --- 全部成功 ---
+    // 上传接口已经持久化头像，不再重复更新用户资料。
     console.log("步骤2成功: 用户信息已更新");
     snackbarStore.showSuccessMessage('头像更新成功！');
     
@@ -170,6 +147,12 @@ const onIdCardBlur = () => {
 
 // 添加修改密码的方法
 const updatePassword = async () => {
+  if (!signon.password) {
+    snackbar.color = 'error';
+    snackbar.message = '请输入当前密码';
+    snackbar.show = true;
+    return;
+  }
   if (newpassword.value !== confirmPassword.value) {
     snackbar.color = 'error';
     snackbar.message = '两次输入的密码不一致，请重新输入！';
@@ -177,31 +160,23 @@ const updatePassword = async () => {
     return;
   }
 
-  const id = profileStore.getUserId(); // 获取用户 ID
-
   try {
-    const response = await axios.put('/user/userinfo/password', {
-      id, // 添加 id 参数
-      name: user.name,
+    await apiClient.put('/users/me/password', {
+      current_password: signon.password,
       password: newpassword.value
     });
 
-    if (response.data.code === 200) {
-      snackbar.color = 'success';
-      snackbar.message = '密码更新成功';
-      snackbar.show = true;
-      newpassword.value = '';
-      confirmPassword.value = '';
-      showPasswordMismatch.value = false;
-    } else {
-      snackbar.color = 'error';
-      snackbar.message = response.data.message;
-      snackbar.show = true;
-    }
-  } catch (error) {
+    snackbar.color = 'success';
+    snackbar.message = '密码更新成功';
+    snackbar.show = true;
+    newpassword.value = '';
+    confirmPassword.value = '';
+    signon.password = '';
+    showPasswordMismatch.value = false;
+  } catch (error: any) {
     console.error('更新密码时出错:', error);
     snackbar.color = 'error';
-    snackbar.message = '服务器内部错误，请稍后再试';
+    snackbar.message = error.message || '服务器内部错误，请稍后再试';
     snackbar.show = true;
   }
 };
@@ -228,7 +203,7 @@ const updateUserInfo = async () => {
   const id = profileStore.getUserId(); // 获取用户 ID
 
   try {
-    const response = await axios.put('/user/userinfo', {
+    const response = await apiClient.put('/users/me', {
       id, // 添加 id 参数
       name: user.name,
       addr: user.addr,
@@ -236,21 +211,15 @@ const updateUserInfo = async () => {
       phone: user.phone,
     });
 
-    if (response.data.code === 200) {
-      snackbar.color = 'success';
-      snackbar.message = '用户信息更新成功';
-      snackbar.show = true;
-      // 更新本地存储的用户信息
-      profileStore.setUser(response.data.data);
-    } else {
-      snackbar.color = 'error';
-      snackbar.message = response.data.message;
-      snackbar.show = true;
-    }
-  } catch (error) {
+    // 更新本地存储的用户信息
+    profileStore.setUser(response.data);
+    snackbar.color = 'success';
+    snackbar.message = '用户信息更新成功';
+    snackbar.show = true;
+  } catch (error: any) {
     console.error('更新用户信息时出错:', error);
     snackbar.color = 'error';
-    snackbar.message = '服务器内部错误，请稍后再试';
+    snackbar.message = error.message || '服务器内部错误，请稍后再试';
     snackbar.show = true;
   }
 };
@@ -268,44 +237,34 @@ const countdown = ref(60);
 const verificationError = ref('');
 const isSubmitting = ref(false);
 
-// 在 data 部分添加
-const receivedVerificationCode = ref(''); // 存储从后端获取的验证码
-
 const sendEmailVerificationCode = async () => {
   if (!user.email) {
     verificationError.value = '邮箱地址不能为空';
     return;
   }
-  
+
   try {
     isSendingCode.value = true;
     verificationError.value = '';
-    
-    const response = await axios.post('/user/userinfo/tolanlord', {
+
+    // 后端不再返回验证码；仅发送邮件
+    await apiClient.post('/users/me/landlord/send-code', {
       email: user.email
     });
-    
-    if (response.data.code === 200) {
-      // 保存验证码到 receivedVerificationCode
-      receivedVerificationCode.value = response.data.data;
-      
-      // 开始倒计时
-      const timer = setInterval(() => {
-        countdown.value--;
-        if (countdown.value <= 0) {
-          clearInterval(timer);
-          isSendingCode.value = false;
-          countdown.value = 60;
-        }
-      }, 1000);
-      
-      snackbar.color = 'success';
-      snackbar.message = '验证码已发送至您的邮箱，请查收';
-      snackbar.show = true;
-    } else {
-      verificationError.value = response.data.message || '验证码发送失败';
-      isSendingCode.value = false;
-    }
+
+    // 开始倒计时
+    const timer = setInterval(() => {
+      countdown.value--;
+      if (countdown.value <= 0) {
+        clearInterval(timer);
+        isSendingCode.value = false;
+        countdown.value = 60;
+      }
+    }, 1000);
+
+    snackbar.color = 'success';
+    snackbar.message = '验证码已发送至您的邮箱，请查收';
+    snackbar.show = true;
   } catch (error) {
     console.error('发送邮箱验证码出错:', error);
     verificationError.value = '服务器错误，请稍后再试';
@@ -313,39 +272,28 @@ const sendEmailVerificationCode = async () => {
   }
 };
 
-// 提交房东申请
+// 提交房东申请（先服务端校验验证码，再升级）
 const submitLandlordApplication = async () => {
   if (!emailVerificationCode.value) {
     verificationError.value = '请输入邮箱验证码';
     return;
   }
-  
-  // 添加验证码比对
-  if (emailVerificationCode.value !== receivedVerificationCode.value) {
-    verificationError.value = '验证码不正确，请重新输入';
-    return;
-  }
-  
+
   try {
     isSubmitting.value = true;
     verificationError.value = '';
-    
-    const response = await axios.put('/user/userinfo/usertype', {
-      email: user.email,
+
+    await apiClient.put('/users/me/landlord', {
       code: emailVerificationCode.value
     });
-    
-    if (response.data.code === 200) {
-      snackbar.color = 'success';
-      snackbar.message = '申请已提交，请重新登陆以获取状态';
-      snackbar.show = true;
-      userType.value = 2;
-    } else {
-      verificationError.value = response.data.message || '申请提交失败';
-    }
-  } catch (error) {
+
+    snackbar.color = 'success';
+    snackbar.message = '申请已提交，请重新登陆以获取状态';
+    snackbar.show = true;
+    userType.value = 2;
+  } catch (error: any) {
     console.error('提交申请出错:', error);
-    verificationError.value = '服务器错误，请稍后再试';
+    verificationError.value = error.response?.data?.message || error.message || '服务器错误，请稍后再试';
   } finally {
     isSubmitting.value = false;
   }
@@ -371,23 +319,18 @@ const avatarInput = ref<HTMLInputElement | null>(null);
 const avatarRefreshKey = ref(0); // 用于强制刷新图片缓存
 
 // 定义默认头像URL（已调整到更靠前的位置）
-const DEFAULT_AVATAR = "/user/images/16_20250612121326.jpg";
+const DEFAULT_AVATAR = defaultAvatar;
 
 // 获取用户头像（修改了默认值设置逻辑）
 const loadUserAvatar = async () => {
   try {
     // 修改API路径与请求方式，使用GET并传递id参数
-    const response = await axios.get(
-      `/user/userinfo/avatar`,
+    const response = await apiClient.get(
+      `/users/avatar`,
       { params: { id: profileStore.getUserId() } }
     );
     
-    if (response.data.code === 200) {
-      user.avatarUrl = response.data.data.avatarUrl;
-    } else {
-      console.error('获取头像失败:', response.data.message);
-      user.avatarUrl = DEFAULT_AVATAR; // 服务器返回错误时使用默认头像
-    }
+    user.avatarUrl = response.data.avatarUrl;
   } catch (error) {
     console.error('加载头像失败:', error);
     user.avatarUrl = DEFAULT_AVATAR; // 异常时使用默认头像
@@ -414,22 +357,16 @@ const handleAvatarUpload = async (event: Event) => {
       // 2. 上传到服务器
       const formData = new FormData();
       formData.append('avatar', avatarFile.value);
-      formData.append('userId', profileStore.getUserId());
 
-      const response = await axios.post('/user/userinfo/avatarurl', formData, {
+      const response = await apiClient.post('/users/me/avatar', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
 
-      if (response.data.code === 200) {
-        profileStore.updateAvatar(response.data.data.avatarUrl);
-        // 上传成功后刷新头像
-        loadUserAvatar();
-      } else {
-        // 上传失败时回退到默认头像
-        user.avatarUrl = DEFAULT_AVATAR;
-      }
+      profileStore.updateAvatar(response.data.avatarUrl);
+      // 上传成功后刷新头像
+      loadUserAvatar();
     } catch (error) {
       console.error('上传失败:', error);
       // 异常时回退到默认头像
@@ -712,7 +649,6 @@ const triggerFileInput = () => {
               <v-col cols="12" sm="6">
                 <v-label class="font-weight-medium mb-2">当前密码</v-label>
                 <v-text-field
-                  readonly
                   v-model="signon.password"
                   class="bg-blue-grey-lighten-5"
                   density="compact"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Icon } from "@iconify/vue";
 import { useAuthStore } from "@/stores/authStore";
-import axios from "axios";
+import apiClient from "@/api/client";
 import router from "~/src/router";
 import { nextTick, ref, onUnmounted } from 'vue';
 import { useProfileStore } from "@/stores/profileStore";
@@ -158,28 +158,17 @@ const sendEmailCode = async () => {
   errorMessages.value = "";
 
   try {
-    const response = await axios.post('/email-auth/send-code', {
+    await apiClient.post('/auth/email-code', {
       email: emailForCode.value
-    }, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
     });
-
-    if (response.data.code === 201) {
-      // 开始倒计时
-      startEmailCountdown();
-      // 显示成功消息
-      errorMessages.value = response.data.message;
-      error.value = false;
-    } else {
-      error.value = true;
-      errorMessages.value = response.data.message || "发送验证码失败";
-    }
-  } catch (err) {
+    // 请求成功（interceptor 已校验 code 2xx），开始倒计时
+    startEmailCountdown();
+    errorMessages.value = "验证码已发送，请查收邮件";
+    error.value = false;
+  } catch (err: any) {
     console.error("发送邮箱验证码出错", err);
     error.value = true;
-    errorMessages.value = err.response?.data?.message || "网络错误，发送失败";
+    errorMessages.value = err?.response?.data?.detail || err?.response?.data?.message || err.message || "网络错误，发送失败";
   } finally {
     isSendingEmailCode.value = false;
   }
@@ -195,46 +184,25 @@ const handleEmailCodeLogin = async () => {
     errorMessages.value = "";
 
     try {
-      const response = await axios.post('/email-auth/verify-login', 
-        new URLSearchParams({
+      const response = await apiClient.post('/auth/email-code/login', {
           email: emailForCode.value,
           code: emailCode.value
-        }), {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
-        }
-      );
+      });
 
-      if (response.data.code === 201) {
-        // 登录成功，处理token
-        authStore.setLoggedIn(true);
-        
-        // 存储token
-        const authStore = useAuthStore();
-        authStore.setToken(response.data.data.token);
-        
-        // 获取用户信息
-        const profileRes = await axios.get("/user/userinfo", {
-          headers: {
-            Authorization: response.data.data.token,
-          },
-        });
-        
-        if (profileRes.data.code === 200) {
-          const ProfileStore = useProfileStore();
-          ProfileStore.setUser(profileRes.data.data);
-        }
-        
-        window.location.href = "/dashboard";
-      } else {
-        error.value = true;
-        errorMessages.value = response.data.message || "邮箱验证登录失败";
-      }
-    } catch (err) {
+      // interceptor 已校验 success，response.data 已是解包后的内层 data
+      authStore.setLoggedIn(true);
+      authStore.setToken(response.data.token);
+
+      // 获取用户信息
+      const profileRes = await apiClient.get("/users/me");
+      const ProfileStore = useProfileStore();
+      ProfileStore.setUser(profileRes.data);
+
+      window.location.href = "/dashboard";
+    } catch (err: any) {
       console.error("邮箱验证码登录出错", err);
       error.value = true;
-      errorMessages.value = err.response?.data?.message || "网络错误，登录失败";
+      errorMessages.value = err?.response?.data?.detail || err?.response?.data?.message || err.message || "网络错误，登录失败";
     } finally {
       isEmailCodeLoading.value = false;
     }
@@ -510,7 +478,7 @@ onUnmounted(() => {
        </v-window>
 
       <div class="mt-5 text-center">
-        <router-link class="text-primary" to="/auth/forgot-password" @click="resetPassword">
+        <router-link class="text-primary" to="/setpassword" @click="resetPassword">
           忘记密码？
         </router-link>
       </div>

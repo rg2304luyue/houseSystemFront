@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import StatusMenu from "./StatusMenu.vue";
+import defaultAvatar from "@/assets/images/avatars/avatar_user.jpg";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -46,7 +47,7 @@ const navs = [
         <v-badge content="2" color="success" dot bordered>
           <v-avatar size="40">
             <v-img
-              src="./images/unavater.png"  
+              :src="defaultAvatar"
             ></v-img>
           </v-avatar>
         </v-badge>
@@ -61,7 +62,7 @@ const navs = [
           <template v-slot:prepend>
             <v-avatar size="40">
               <v-img
-                src="./images/unavater.png"
+                :src="defaultAvatar"
               ></v-img>
             </v-avatar>
           </template>
@@ -118,7 +119,7 @@ const navs = [
         <v-badge content="2" color="success" dot bordered>
           <v-avatar size="40">
             <v-img
-              :src="user.avatarUrl || './images/unavater.png'"
+              :src="user.avatarUrl || defaultAvatar"
               
             ></v-img>
           </v-avatar>
@@ -132,7 +133,7 @@ const navs = [
           <template v-slot:prepend>
             <v-avatar size="40">
               <v-img
-                :src="user.avatarUrl || './images/unavater.png'"
+                :src="user.avatarUrl || defaultAvatar"
                 
               ></v-img>
             </v-avatar>

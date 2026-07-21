@@ -56,15 +56,10 @@ const landlordName = computed(() => profileStore.user.name || 'Lappand');
 const fetchHouses = async () => {
   loading.value = true;
   try {
-    const response = await apiClient.post('/houseinfo/landlord', {
-      username: profileStore.user?.name
-    });
-    
-    if (response.data.code === 200) {
-      houses.value = Array.isArray(response.data.data) ? response.data.data : [];
-      totalPages.value = 1;
-      totalItems.value = houses.value.length;
-    }
+    const response = await apiClient.get('/houses/landlord/me');
+    houses.value = Array.isArray(response.data) ? response.data : [];
+    totalPages.value = 1;
+    totalItems.value = houses.value.length;
   } catch (error) {
     console.error('获取房源列表失败:', error);
     snackbar.show = true;
@@ -80,7 +75,7 @@ const toggleAvailability = async (house: HouseItem) => {
   const newVal = house.available === 1 ? 0 : 1;
   try {
     // >>> 调用后端 PUT 接口
-    await apiClient.put(`/houseinfo/${house.id}`, {
+    await apiClient.put(`/houses/${house.id}`, {
       available: newVal
     });
     // <<<

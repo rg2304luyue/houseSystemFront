@@ -1,31 +1,31 @@
 // src/api/houseApi.ts
-import axios from 'axios';
+// 使用统一的 apiClient（自动携带 token），不再直接使用 axios
 
-// 假设你的 vite.config.ts 中有代理设置 /sdApi 到你的 Flask 后端
-const API_BASE_URL = '/houseinfo'; // 对应 @house_info_bp.route('/')
+import apiClient from "./client";
+
+const API_BASE_URL = "/houses";
 
 export interface HouseFilters {
   page?: number;
   per_page?: number;
-  region?: string; // 经前端 join(',') 处理后的字符串
+  region?: string;
   block?: string;
-  community?: string; // 主搜索框内容
-  rooms?: string; // 经前端 join(',') 处理后的字符串
+  community?: string;
+  rooms?: string;
   min_price?: number;
   max_price?: number;
-  rent_type?: string; // '整租' 或 '合租'
-  subway?: number; // 后端期望 0 或 1
+  rent_type?: string;
+  subway?: number;
   decoration?: string;
-  available?: number; // 后端期望 0 或 1
-  orientation?: string; // 经前端 join(',') 处理后的字符串
+  available?: number;
+  orientation?: string;
 }
 
 export interface HouseInfo {
   id: number;
   title: string;
-  // address: string; // 示例数据使用 region, block, community
   region: string;
-  block: string | null; // 后端可能返回 null
+  block: string | null;
   community: string;
   rooms: string;
   area: number;
@@ -36,16 +36,15 @@ export interface HouseInfo {
   description?: string;
   floor?: string;
   total_floors?: number;
-  direction: string; // 房屋朝向
-  subway?: number; // 0 或 1
+  direction: string;
+  subway?: number;
   decoration?: string;
-  available?: number; // 0 或 1
+  available?: number;
   contact_person?: string;
   contact_phone?: string;
   features?: string[];
-  tag_new?: number; // 新上房源标记, 0 或 1
-  landlord?: string; // 房东或公寓名
-  // 以下字段根据您的示例数据补充，如果不需要可以移除
+  tag_new?: number;
+  landlord?: string;
   house_num?: string;
   page_views?: string;
   phone_num?: string;
@@ -60,46 +59,26 @@ export interface PaginatedHouseResponse {
 }
 
 export const fetchHouses = async (filters: HouseFilters): Promise<PaginatedHouseResponse> => {
-  try {
-    const paramsToSend: any = { ...filters };
+  const paramsToSend: any = { ...filters };
 
-    // 移除值为 undefined 或空字符串的筛选条件，避免发送无效参数
-    // (此步骤已在 HouseList.vue 的 loadHouses 中处理，此处是双重保险或如果直接调用此API)
-    Object.keys(paramsToSend).forEach(key => {
-      const k = key as keyof HouseFilters;
-      if (paramsToSend[k] === undefined || paramsToSend[k] === '') {
-        delete paramsToSend[k];
-      }
-    });
-
-    const response = await axios.get<any>(`${API_BASE_URL}/`, {
-      params: paramsToSend,
-    });
-
-    if (response.data && response.data.code === 200 && response.data.success === true) {
-      return response.data.data as PaginatedHouseResponse;
-    } else {
-      console.error("Error fetching houses:", response.data.message || 'Unknown error from API');
-      return { items: [], total: 0, page: filters.page || 1, per_page: filters.per_page || 10, pages: 0 };
+  Object.keys(paramsToSend).forEach((key) => {
+    const k = key as keyof HouseFilters;
+    if (paramsToSend[k] === undefined || paramsToSend[k] === "") {
+      delete paramsToSend[k];
     }
-  } catch (error) {
-    console.error('Network error fetching houses:', error);
-    // 可以在这里抛出错误或使用全局错误处理
-    return { items: [], total: 0, page: filters.page || 1, per_page: filters.per_page || 10, pages: 0 };
-  }
+  });
+
+  const response = await apiClient.get(`${API_BASE_URL}/`, {
+    params: paramsToSend,
+  });
+
+  // 响应拦截器已自动解包 {code,data,message,success}，response.data 即为 PaginatedHouseResponse
+  return response.data as PaginatedHouseResponse;
 };
 
-export const fetchHouseById = async (id: number): Promise<HouseInfo | null> => {
-  try {
-    const response = await axios.get<any>(`${API_BASE_URL}/${id}`);
-    if (response.data && response.data.code === 200 && response.data.success === true) {
-      return response.data.data as HouseInfo;
-    } else {
-      console.error(`Error fetching house ${id}:`, response.data.message || 'Unknown error from API');
-      return null;
-    }
-  } catch (error) {
-    console.error(`Network error fetching house ${id}:`, error);
-    return null;
-  }
-}
+export const fetchHouseById = async (id: number): Promise<HouseInfo> => {
+  const response = await apiClient.get(`${API_BASE_URL}/${id}`);
+
+  // 响应拦截器已自动解包，response.data 即为 HouseInfo
+  return response.data as HouseInfo;
+};

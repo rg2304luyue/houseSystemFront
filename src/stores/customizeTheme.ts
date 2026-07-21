@@ -32,13 +32,8 @@ export const useCustomizeThemeStore = defineStore({
   }),
 
   persist: {
-    enabled: true,
-    strategies: [
-      {
-        storage: localStorage,
-        paths: ["darkTheme", "primaryColor", "localCode", "mainSidebar"],
-      },
-    ],
+    storage: localStorage,
+    pick: ["darkTheme", "primaryColor", "localCode", "mainSidebar"],
   },
 
   getters: {},

@@ -123,5 +123,5 @@ export const useProfileStore = defineStore({
       this.notifications = { ...this.notifications, ...settings };
     },
   },
-  persist: { enabled: true },  
+  persist: true,
 });

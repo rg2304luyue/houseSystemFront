@@ -40,35 +40,16 @@ export default defineConfig({
   server: {
     port: 4399,
     proxy: {
-      // 所有后端 API 代理到 Flask（本地开发时使用；Docker 下由 nginx 处理）
-      "/user":        "http://localhost:5000",
-      "/houseinfo":   "http://localhost:5000",
-      "/chat-ai":     "http://localhost:5000",
-      "/comments":    "http://localhost:5000",
-      "/news":        "http://localhost:5000",
-      "/contracts":   "http://localhost:5000",
-      "/appointments":"http://localhost:5000",
-      "/repaires":    "http://localhost:5000",
-      "/messages":    "http://localhost:5000",
-      "/rental":      "http://localhost:5000",
-      "/housedetail": "http://localhost:5000",
-      "/admin":       "http://localhost:5000",
-      "/github":      "http://localhost:5000",
-      "/email-auth":  "http://localhost:5000",
-      "/sms":         "http://localhost:5000",
-      "/oss":         "http://localhost:5000",
-      "/celery":      "http://localhost:5000",
-      "/alipay":      "http://localhost:5000",
-      "/api/alipay":  "http://localhost:5000",
-      "/socket.io": {
-        target: "http://localhost:5000",
-        ws: true,
-      },
-      "/sdApi": {
-        target: "http://localhost:5000",
+      // FastAPI /api/v1 代理（新后端）
+      "/api/v1": {
+        target: "http://127.0.0.1:8000",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/sdApi/, ""),
       },
+      "/images": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+      // Local development proxies only to the FastAPI backend.
     },
   },
   preview: {

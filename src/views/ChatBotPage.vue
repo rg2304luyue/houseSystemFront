@@ -5,7 +5,6 @@ import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from
 import axios from 'axios';
 import { useSnackbarStore } from "@/stores/snackbarStore";
 import AnimationChat from "@/components/animations/AnimationChat1.vue";
-import AnimationAi from "@/components/animations/AnimationBot1.vue";
 import { countAndCompleteCodeBlocks } from "@/utils/aiUtils";
 import { scrollToBottom } from "@/utils/common";
 import { MdPreview } from "md-editor-v3";
@@ -24,6 +23,7 @@ interface Message {
   content: string;
   role: "user" | "assistant" | "system";
   streaming?: boolean; // 标记是否正在流式输出
+  activity?: string;
 }
 
 interface Session {
@@ -44,8 +44,9 @@ const drawer = ref(true);
 
 // 流式控制
 const abortController = ref<AbortController | null>(null);
+const currentRequestId = ref<string | null>(null);
 
-const BASE_URL = '/chat-ai';
+const BASE_URL = '/api/v1/chat-ai';
 
 const axiosInstance = axios.create({ baseURL: BASE_URL });
 
@@ -162,11 +163,18 @@ const sendMessage = async () => {
 
   // 添加一条空的 assistant 消息，用于实时填充流式内容
   const assistantMsgIndex = messages.value.length;
-  messages.value.push({ content: "", role: "assistant", streaming: true });
+  messages.value.push({
+    content: "",
+    role: "assistant",
+    streaming: true,
+    activity: "正在思考中"
+  });
 
   // 终止上一个请求（如果有）
   if (abortController.value) abortController.value.abort();
   abortController.value = new AbortController();
+  const requestId = crypto.randomUUID();
+  currentRequestId.value = requestId;
 
   const token = getToken();
 
@@ -181,7 +189,8 @@ const sendMessage = async () => {
       },
       body: JSON.stringify({
         message: currentMsg,
-        session_id: currentSessionId.value
+        session_id: currentSessionId.value,
+        request_id: requestId
       }),
       signal: abortController.value.signal
     });
@@ -193,6 +202,7 @@ const sendMessage = async () => {
     const reader = response.body!.getReader();
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
+    let completed = false;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -201,6 +211,7 @@ const sendMessage = async () => {
       buffer += decoder.decode(value, { stream: true });
 
       // 按 SSE 格式解析（每条消息以 \n\n 结尾）
+      buffer = buffer.replace(/\r\n/g, '\n');
       const lines = buffer.split('\n\n');
       buffer = lines.pop() || ''; // 未完成的部分留到下次
 
@@ -212,23 +223,42 @@ const sendMessage = async () => {
         try {
           const data = JSON.parse(jsonStr);
 
-          if (data.type === 'chunk') {
+          if (data.type === 'start') {
+            if (!currentSessionId.value && data.session_id) {
+              currentSessionId.value = data.session_id;
+            }
+
+          } else if (data.type === 'status') {
+            messages.value[assistantMsgIndex].activity = data.label || '正在思考中';
+
+          } else if (data.type === 'chunk') {
             // 实时追加内容
             messages.value[assistantMsgIndex].content += data.content;
+            messages.value[assistantMsgIndex].activity = undefined;
             await nextTick();
             scrollToBottom(document.querySelector(".message-container"));
 
           } else if (data.type === 'done') {
             // 流式结束
             messages.value[assistantMsgIndex].streaming = false;
+            messages.value[assistantMsgIndex].activity = undefined;
+            completed = true;
             if (!currentSessionId.value && data.session_id) {
               currentSessionId.value = data.session_id;
             }
             await fetchSessions();
 
           } else if (data.type === 'error') {
-            messages.value[assistantMsgIndex].content += `\n\n[错误: ${data.message}]`;
+            messages.value[assistantMsgIndex].content = data.message || 'AI 服务暂时不可用，请稍后重试。';
             messages.value[assistantMsgIndex].streaming = false;
+            messages.value[assistantMsgIndex].activity = undefined;
+            completed = true;
+
+          } else if (data.type === 'cancelled') {
+            messages.value[assistantMsgIndex].content = '已停止生成。';
+            messages.value[assistantMsgIndex].streaming = false;
+            messages.value[assistantMsgIndex].activity = undefined;
+            completed = true;
           }
         } catch (e) {
           console.warn('SSE JSON 解析失败:', jsonStr);
@@ -236,48 +266,36 @@ const sendMessage = async () => {
       }
     }
 
+    if (!completed) {
+      throw new Error('SSE stream ended before completion');
+    }
+
   } catch (error: any) {
     if (error.name === 'AbortError') {
-      // 用户主动取消
-      messages.value[assistantMsgIndex].content += '\n\n[已停止生成]';
+      messages.value[assistantMsgIndex].content = '已停止生成。';
     } else {
       console.error('流式请求失败:', error);
-      // 降级到普通请求
-      await sendMessageFallback(currentMsg, assistantMsgIndex);
-      return;
+      messages.value[assistantMsgIndex].content = '连接中断，请稍后重新发送。';
     }
     messages.value[assistantMsgIndex].streaming = false;
+    messages.value[assistantMsgIndex].activity = undefined;
   } finally {
     isLoading.value = false;
     abortController.value = null;
-  }
-};
-
-// 降级：普通非流式请求（当流式失败时使用）
-const sendMessageFallback = async (msg: string, assistantMsgIndex: number) => {
-  try {
-    const response = await axiosInstance.post('/chat', {
-      message: msg,
-      session_id: currentSessionId.value
-    });
-    if (response.data.code === 200) {
-      const data = response.data.data;
-      messages.value[assistantMsgIndex].content = data.reply;
-      if (!currentSessionId.value) currentSessionId.value = data.session_id;
-      await fetchSessions();
-    } else {
-      messages.value[assistantMsgIndex].content = "抱歉，请求失败，请稍后重试。";
-    }
-  } catch (e) {
-    messages.value[assistantMsgIndex].content = "网络异常，请检查连接后重试。";
-  } finally {
-    messages.value[assistantMsgIndex].streaming = false;
-    isLoading.value = false;
+    currentRequestId.value = null;
   }
 };
 
 // 停止生成
-const stopGeneration = () => {
+const stopGeneration = async () => {
+  const requestId = currentRequestId.value;
+  if (requestId) {
+    try {
+      await axiosInstance.post(`/runs/${requestId}/cancel`);
+    } catch (error) {
+      console.warn('停止后端生成失败:', error);
+    }
+  }
   if (abortController.value) {
     abortController.value.abort();
     abortController.value = null;
@@ -502,8 +520,12 @@ onUnmounted(() => {
                 <v-card>
                   <!-- 正在流式输出时显示内容 + 光标动画 -->
                   <div v-if="message.streaming" class="streaming-wrapper">
+                    <div v-if="message.activity && !message.content" class="agent-activity">
+                      <v-progress-circular indeterminate size="18" width="2" color="primary" />
+                      <span>{{ message.activity }}</span>
+                    </div>
                     <md-preview :modelValue="message.content" class="font-1" />
-                    <span class="streaming-cursor">▋</span>
+                    <span v-if="message.content" class="streaming-cursor">▋</span>
                   </div>
                   <!-- 完成后正常渲染 -->
                   <md-preview v-else :modelValue="message.content" class="font-1" />
@@ -512,10 +534,6 @@ onUnmounted(() => {
             </div>
           </template>
           
-          <!-- 加载动画（等待第一个 chunk 到来前） -->
-          <div v-if="isLoading && messages[messages.length - 1]?.content === ''" class="pa-6">
-            <div class="message"><AnimationAi :size="100" /></div>
-          </div>
         </perfect-scrollbar>
         
         <div class="no-message-container" v-else>
@@ -644,6 +662,14 @@ onUnmounted(() => {
   position: relative;
   display: inline-block;
   width: 100%;
+}
+
+.agent-activity {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-height: 40px;
+  padding: 12px 16px;
 }
 
 // 流式光标动画

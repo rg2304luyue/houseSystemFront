@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Icon } from "@iconify/vue";
+import apiClient from "@/api/client";
 
 const router = useRouter();
 const isLoading = ref(false);
@@ -11,10 +12,9 @@ const verificationCode = ref("");
 const newPassword = ref("");
 const confirmPassword = ref("");
 const isFormValid = ref(true);
-const isCodeSent = ref(false); // 控制验证码输入框显示
-const isCodeVerified = ref(false); // 控制新密码输入框显示
-const countdown = ref(0); // 倒计时
-const serverVerificationCode = ref(""); // 存储从服务器返回的验证码
+const isCodeSent = ref(false);
+const countdown = ref(0);
+let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
 // 验证规则
 const emailRules = ref([
@@ -25,7 +25,6 @@ const emailRules = ref([
 const codeRules = ref([
   (v: string) => !!v || "请输入验证码",
   (v: string) => v.length === 6 || "验证码应为6位数字",
-  (v: string) => v === serverVerificationCode.value || "验证码不正确",
 ]);
 
 const passwordRules = ref([
@@ -38,39 +37,25 @@ const confirmPasswordRules = ref([
   (v: string) => v === newPassword.value || "两次输入的密码不一致",
 ]);
 
-// 发送验证码
+// 发送验证码（后端不返回验证码，仅发送邮件）
 const sendVerificationCode = async () => {
   const { valid } = await resetForm.value.validate();
-  
+
   if (valid) {
     isLoading.value = true;
-    
+
     try {
-      const response = await fetch("/user/userinfo/password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email.value
-        })
+      await apiClient.post("/users/password-reset/send-code", {
+        email: email.value
       });
 
-      if (!response.ok) {
-        throw new Error("发送验证码失败");
-      }
-
-      const data = await response.json();
-      
-      // 存储服务器返回的验证码
-      serverVerificationCode.value = data.data;
-      
+      // 拦截器已校验成功，能执行到这里说明请求已成功
       isCodeSent.value = true;
       startCountdown();
-      alert("验证码已发送至您的邮箱，请查收");
-    } catch (error) {
+      alert("验证码已发送至您的邮箱，请查收（有效期2分钟）");
+    } catch (error: any) {
       console.error("发送验证码出错", error);
-      alert(error.message || "发送验证码出错");
+      alert(error?.response?.data?.message || error.message || "发送验证码出错");
     } finally {
       isLoading.value = false;
     }
@@ -79,79 +64,44 @@ const sendVerificationCode = async () => {
 
 // 开始倒计时
 const startCountdown = () => {
-  countdown.value = 120; // 2分钟倒计时
-  const timer = setInterval(() => {
+  countdown.value = 120;
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
     countdown.value--;
     if (countdown.value <= 0) {
-      clearInterval(timer);
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
     }
   }, 1000);
 };
 
-// 验证验证码
-const verifyCode = async () => {
-  const { valid } = await resetForm.value.validate();
-  
-  if (valid) {
-    isLoading.value = true;
-    
-    try {
-      // 直接比较用户输入的验证码和服务器返回的验证码
-      if (verificationCode.value === serverVerificationCode.value) {
-        isCodeVerified.value = true;
-        alert("验证码验证成功，请设置新密码");
-      } else {
-        throw new Error("验证码错误");
-      }
-    } catch (error) {
-      console.error("验证验证码出错", error);
-      alert(error.message || "验证码错误，请重新输入");
-    } finally {
-      isLoading.value = false;
-    }
-  }
-};
-
-// 提交重置密码
+// 提交重置密码（一次性发送 email + code + password 到后端验证）
 const handleResetPassword = async () => {
   if (!isCodeSent.value) {
     await sendVerificationCode();
     return;
   }
 
-  if (!isCodeVerified.value) {
-    await verifyCode();
-    return;
-  }
-
   const { valid } = await resetForm.value.validate();
-  
+
   if (valid) {
     isLoading.value = true;
-    
+
     try {
-      const response = await fetch("/user/userinfo/password_e", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email.value,
-          password: newPassword.value
-        })
+      await apiClient.put("/users/password-reset", {
+        email: email.value,
+        code: verificationCode.value,
+        password: newPassword.value
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "密码重置失败");
-      }
-
+      // 拦截器已校验成功，能执行到这里说明请求已成功
       alert("密码重置成功，请使用新密码登录");
       router.push("/auth/signin");
-    } catch (error) {
+    } catch (error: any) {
       console.error("重置密码出错", error);
-      alert(error.message || "重置密码出错，请稍后重试");
+      alert(error?.response?.data?.message || error.message || "重置密码出错，请稍后重试");
     } finally {
       isLoading.value = false;
     }
@@ -172,12 +122,7 @@ const backToLogin = () => {
           重置密码
         </v-card-title>
         <v-card-subtitle class="text-subtitle-1 mt-2">
-          <template v-if="!isCodeVerified">
-            请输入您的注册邮箱，我们将发送密码重置验证码
-          </template>
-          <template v-else>
-            请设置您的新密码
-          </template>
+          请输入您的注册邮箱，我们将发送密码重置验证码
         </v-card-subtitle>
       </div>
 
@@ -206,7 +151,7 @@ const backToLogin = () => {
           ></v-text-field>
 
           <v-text-field
-            v-if="isCodeSent && !isCodeVerified"
+            v-if="isCodeSent"
             v-model="verificationCode"
             :rules="codeRules"
             label="验证码"
@@ -222,41 +167,41 @@ const backToLogin = () => {
             class="mb-4"
           ></v-text-field>
 
-          <template v-if="isCodeVerified">
-            <v-text-field
-              v-model="newPassword"
-              :rules="passwordRules"
-              label="新密码"
-              placeholder="请输入至少5位的新密码"
-              prepend-inner-icon="mdi:lock-outline"
-              density="comfortable"
-              variant="outlined"
-              color="primary"
-              bg-color="#f8f9fa"
-              name="newPassword"
-              type="password"
-              validateOn="blur"
-              @keyup.enter="handleResetPassword"
-              class="mb-4"
-            ></v-text-field>
+          <v-text-field
+            v-if="isCodeSent"
+            v-model="newPassword"
+            :rules="passwordRules"
+            label="新密码"
+            placeholder="请输入至少5位的新密码"
+            prepend-inner-icon="mdi:lock-outline"
+            density="comfortable"
+            variant="outlined"
+            color="primary"
+            bg-color="#f8f9fa"
+            name="newPassword"
+            type="password"
+            validateOn="blur"
+            @keyup.enter="handleResetPassword"
+            class="mb-4"
+          ></v-text-field>
 
-            <v-text-field
-              v-model="confirmPassword"
-              :rules="confirmPasswordRules"
-              label="确认密码"
-              placeholder="请再次输入新密码"
-              prepend-inner-icon="mdi:lock-check-outline"
-              density="comfortable"
-              variant="outlined"
-              color="primary"
-              bg-color="#f8f9fa"
-              name="confirmPassword"
-              type="password"
-              validateOn="blur"
-              @keyup.enter="handleResetPassword"
-              class="mb-4"
-            ></v-text-field>
-          </template>
+          <v-text-field
+            v-if="isCodeSent"
+            v-model="confirmPassword"
+            :rules="confirmPasswordRules"
+            label="确认密码"
+            placeholder="请再次输入新密码"
+            prepend-inner-icon="mdi:lock-check-outline"
+            density="comfortable"
+            variant="outlined"
+            color="primary"
+            bg-color="#f8f9fa"
+            name="confirmPassword"
+            type="password"
+            validateOn="blur"
+            @keyup.enter="handleResetPassword"
+            class="mb-4"
+          ></v-text-field>
 
           <v-btn
             :loading="isLoading"
@@ -274,12 +219,9 @@ const backToLogin = () => {
               <template v-if="!isCodeSent">
                 获取验证码
               </template>
-              <template v-else-if="isCodeSent && !isCodeVerified">
-                验证验证码
-                <span v-if="countdown > 0">({{ countdown }}s)</span>
-              </template>
               <template v-else>
                 重置密码
+                <span v-if="countdown > 0">({{ countdown }}s)</span>
               </template>
             </span>
           </v-btn>
@@ -308,8 +250,8 @@ const backToLogin = () => {
     <div class="auth-footer mt-6 text-center">
       <p class="text-body-2 text-grey-darken-1">
         还没有账号？
-        <router-link 
-          to="/auth/signup" 
+        <router-link
+          to="/auth/signup"
           class="text-primary font-weight-bold text-decoration-none"
         >
           立即注册

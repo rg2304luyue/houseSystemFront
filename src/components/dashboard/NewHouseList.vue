@@ -9,16 +9,16 @@
 import { useRouter } from 'vue-router'
 const router = useRouter()
 function goHouseDetail() {
-  router.push(`/house`)
+  router.push(`/houseList`)
 }
 function goHouseDetail1(id: number) {
-  router.push(`/house/${id}`)
+  router.push(`/houses/${id}`)
 }
 
 import { ref, onMounted } from "vue";
-import axios from "axios";
+import apiClient from "@/api/client";
 const houses =ref<any[]>( [
-  
+
   {
     landlord: "孙女士",
     page_views: "560",
@@ -31,8 +31,8 @@ const houses =ref<any[]>( [
 ]);
 const fetchHouces = async () => {
   try {
-    const response = await axios.get("/sdApi/houseinfo/newLists");
-    houses.value = response.data.data; // 假设返回的是数组
+    const response = await apiClient.get("/houses/new");
+    houses.value = response.data; // 响应拦截器已解包
   } catch (error) {
     console.error("获取数据失败:", error);
   }

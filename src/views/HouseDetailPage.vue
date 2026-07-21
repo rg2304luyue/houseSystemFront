@@ -1,117 +1,72 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import axios from "axios";
+import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
+import { fetchHouseById, type HouseInfo } from "@/api/houseApi";
+import apiClient from "@/api/client";
+import HouseCard1 from "@/components/HouseDetail/HouseCard1.vue";
+import Feature5 from "@/components/HouseDetail/Feature5.vue";
+import HouseFacilities from "@/components/HouseDetail/HouseFacilities.vue";
+import Map from "@/components/HouseDetail/Map.vue";
 
-import HouseCard1 from "~/src/components/HouseDetail/HouseCard1.vue";
-import Newsletter2 from "~/src/components/HouseDetail/Newsletter2.vue";
-import Feature5 from "~/src/components/HouseDetail/Feature5.vue";
-import HouseFacilities from "~/src/components/HouseDetail/HouseFacilities.vue";
-import Map from "~/src/components/HouseDetail/Map.vue";
-import { onMounted } from "vue";
 const route = useRoute();
-const id = route.params.id||"1";
-
-const detail = ref({ 
-  created_at: "2025-05-22T21:32:16",
-  detail_id: 1,
-  facilities: { 
-    tv: true,
-    washer: true,
-    wifi: true,
-    refrigerator: true, 
-    bed: true,
-    airconditioner: false 
+const id = Number(route.params.id);
+const loading = ref(true);
+const errorMessage = ref("");
+const house = ref<HouseInfo | null>(null);
+const detail = ref({
+  facilities: {
+    tv: false,
+    washer: false,
+    wifi: false,
+    refrigerator: false,
+    bed: false,
+    airconditioner: false,
   },
-  house_info_id: 1,
-  map_coordinates: { lat: 30.0, lng: 120.0 }, // 修正了下 map_coordinates 格式
-  photos: [ /* ... */ ],
-  updated_at: "2025-05-22T21:34:28"
+  map_coordinates: { lat: 30, lng: 120 },
+  photos: [] as string[],
 });
-const house =ref( 
-  
-  {
-        area: 73.0,
-        available: 1,
-        block: "树木岭",
-        community: "锦源小区",
-        decoration: "精装",
-        direction: "南",
-        house_num: "10001",
-        id: 1,
-        image_url: "https://i.pinimg.com/736x/c4/3a/90/c43a90fcf336e05d7f849b527f067464.jpg",
-        landlord: "张先生",
-        page_views: "108次浏览",
-        phone_num: "13800001234",
-        price: 1600,
-        publish_time: "2025-05-15",
-        region: "雨花",
-        rent_type: "整租",
-        rooms: "2室1厅1卫",
-        subway: 1,
-        tag_new: 1,
-        title: "整租·锦源小区 2室1厅 南"
-  },
-);
-const fetchHouce = async () => {
-  try {
-    const response = await axios.get(`/houseinfo/${id}`);
-    house.value = response.data.data; // 假设返回的是数组
-  } catch (error) {
-    console.error("获取数据失败:", error);
-  }
-};
-const fetchHouseDetail = async () => {
-  try {
-    const response = await axios.get(`/housedetail/${id}`);
-    detail.value = response.data.data; // 假设返回的是数组
-  } catch (error) {
-    console.error("获取数据失败:", error);
-  }
-};
 
-
-const fetchRecommendedHouse = async () => {
-  try {
-    const response = await axios.post(
-      `/houseinfo/views`,
-      { houseid: id }, // POST 请求体数据
-      {
-        headers: {
-          'Content-Type': 'application/json' // 确保设置正确的 Content-Type
-        }
-      }
-    );
-    console.log("浏览次数++:", response.data);
-    // 这里可以处理返回的热门推荐数据
-  } catch (error) {
-    console.error("获取热门推荐失败:", error);
+onMounted(async () => {
+  if (!Number.isInteger(id) || id <= 0) {
+    errorMessage.value = "房源编号无效";
+    loading.value = false;
+    return;
   }
-};
-onMounted(() => {
-  console.log("Dashboard mounted");
-  fetchHouce();
-  fetchHouseDetail();
-  fetchRecommendedHouse(); // 新增调用
-  console.log("House data:", house.value);
-  console.log("House detail data:", detail.value);
+  try {
+    const [houseData, detailResponse] = await Promise.all([
+      fetchHouseById(id),
+      apiClient.get(`/houses/${id}/detail`).catch((error) => {
+        if (error?.response?.status === 404) return null;
+        throw error;
+      }),
+    ]);
+    house.value = houseData;
+    if (detailResponse?.data) detail.value = detailResponse.data;
+    await apiClient.post(`/houses/${id}/increment-view`);
+  } catch (error: any) {
+    errorMessage.value = error?.response?.data?.detail || "房源加载失败";
+  } finally {
+    loading.value = false;
+  }
 });
 </script>
 
 <template>
   <div class="pa-5">
-    <v-row class="flex-0" dense>
+    <v-skeleton-loader v-if="loading" type="card, article" />
+    <v-alert v-else-if="errorMessage" type="error" variant="tonal">{{ errorMessage }}</v-alert>
+    <v-row v-else-if="house" class="flex-0" dense>
       <v-col cols="12" xl="4">
-         <HouseCard1 :house="house" :detail="detail" />
+        <HouseCard1 :house="house" :detail="detail" />
       </v-col>
       <v-col cols="12" xl="4">
-          <HouseFacilities :facilities="detail.facilities" />
+        <HouseFacilities :facilities="detail.facilities" />
       </v-col>
       <v-col cols="12" xl="4">
-          <Map :address="`湖南省长沙市${house.region}${house.block}${house.community}`" />
+        <Map :address="`湖南省长沙市${house.region || ''}${house.block || ''}${house.community || ''}`" />
       </v-col>
-      <v-col cols="12" md="12">
-        <Feature5 :houseId="id"/>
+      <v-col cols="12">
+        <Feature5 :house-id="id" />
       </v-col>
     </v-row>
   </div>

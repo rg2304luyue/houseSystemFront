@@ -106,7 +106,7 @@ houseSystemFront-Ylfmoonn/
 ### 前置要求
 
 - Node.js 18+
-- 后端服务已启动（默认 `http://localhost:5000`）
+- 后端服务已启动（本地开发为 FastAPI，默认 `http://127.0.0.1:8000`）
 
 ### 1. 安装依赖
 
@@ -121,7 +121,7 @@ npm run dev
 # 启动在 http://localhost:4399
 ```
 
-Vite 自动将 API 请求代理到 Flask 后端（`localhost:5000`），见 `vite.config.ts` 中的 `server.proxy` 配置。
+Vite 自动将 `/api/v1` 请求代理到 FastAPI（`127.0.0.1:8000`），见 `vite.config.ts` 中的 `server.proxy` 配置。旧 Flask 路径仅为迁移期间的回退。
 
 ### 3. 构建生产版本
 

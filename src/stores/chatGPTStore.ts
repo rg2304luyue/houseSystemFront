@@ -11,8 +11,8 @@ export const useChatGPTStore = defineStore({
   }),
 
   persist: {
-    enabled: true,
-    strategies: [{ storage: localStorage, paths: ["propmpt", "apiKey", "proxyUrl", "model"] }],
+    storage: localStorage,
+    pick: ["propmpt", "apiKey", "proxyUrl", "model"],
   },
 
   getters: {

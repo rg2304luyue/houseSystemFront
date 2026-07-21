@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router'
-import { useFixCardStore } from '@/stores/fixCardStore'
+import apiClient from '@/api/client'
 
 const router = useRouter()
 const route = useRoute()
-const fixCardStore = useFixCardStore()
 
 // 定义props
 const props = defineProps<{
@@ -71,9 +70,10 @@ const navigateToChat = () => {
 }
 
 const showDatePicker = ref(false);
-const selectedDate = ref(null);
+const selectedDate = ref<Date | null>(null);
 
-const onDateSelected = async (date: string | Date) => {
+const onDateSelected = async (date: Date | null) => {
+  if (!date) return;
   console.log("选择的日期是：", date);
 
   const token = localStorage.getItem('token');
@@ -88,55 +88,19 @@ const onDateSelected = async (date: string | Date) => {
   }
 
   try {
-    const response = await fetch('/appointments', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        username: username,
-        time: date.toISOString(),
-        property: props.house.title
-      })
+    const response = await apiClient.post('/appointments', {
+      time: date instanceof Date ? date.toISOString() : new Date(date).toISOString(),
+      property: props.house.title
     });
 
-    if (!response.ok) {
-      throw new Error('网络响应不正常');
-    }
-
-    const data = await response.json();
-    console.log('后端响应:', data);
+    console.log('后端响应:', response.data);
     alert('预约日期提交成功！');
     showDatePicker.value = false;
   } catch (error) {
     console.error('提交日期失败:', error);
-    alert('提交日期失败，请稍后再试');
+    alert('提交日期失败，请稍后重试');
   }
 };
-
-// 打开报修弹窗
-const openRepairCard = () => {
-  fixCardStore.setCurrentProperty({
-    id: props.house.id,
-    title: props.house.title,
-    region: `${props.house.region}区${props.house.block}${props.house.community}`,
-    landlord_username: props.house.landlord,
-  })
-  fixCardStore.setFixType('repair')
-  fixCardStore.toggleFixCard()
-}
-
-// 打开投诉弹窗
-const openComplainCard = () => {
-  fixCardStore.setCurrentProperty({
-    id: props.house.id,
-    title: props.house.title,
-    region: `${props.house.region}区${props.house.block}${props.house.community}`,
-    landlord_username: props.house.landlord,
-  })
-  fixCardStore.setFixType('complain')
-  fixCardStore.toggleFixCard()
-}
 
 </script>
 
@@ -274,38 +238,9 @@ const openComplainCard = () => {
       </v-btn>
     </div>
 
-    <!-- 辅助操作按钮组（报修/投诉） -->
-    <div class="secondary-actions mt-3">
-      <v-btn
-        size="small"
-        variant="text"
-        prepend-icon="mdi-tools"
-        @click="openRepairCard"
-        class="secondary-btn"
-      >
-        申报维修
-      </v-btn>
-      <v-btn
-        size="small"
-        variant="text"
-        prepend-icon="mdi-alert-circle-outline"
-        @click="openComplainCard"
-        class="secondary-btn"
-      >
-        投诉房东
-      </v-btn>
-    </div>
 
-
-    <!-- 背景遮罩 -->
-  <div
-    v-if="showDatePicker"
-    class="date-picker-backdrop"
-    @click="showDatePicker = false"
-  ></div>
-
-  <!-- 日期选择器 -->
-  <div v-if="showDatePicker" class="date-picker-container">
+  <!-- 使用 Vuetify 全局浮层，确保整个页面的遮罩颜色和层级一致。 -->
+  <v-dialog v-model="showDatePicker" max-width="600" scrollable>
     <v-card class="date-picker-card" elevation="10" rounded="lg">
       <v-card-actions class="d-flex justify-end pa-0 ma-0">
         <v-btn
@@ -324,7 +259,7 @@ const openComplainCard = () => {
         width="100%"
       ></v-date-picker>
     </v-card>
-  </div>
+  </v-dialog>
 
     <v-spacer></v-spacer>
   </div>
@@ -365,46 +300,6 @@ const openComplainCard = () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* 辅助操作按钮组 */
-.secondary-actions {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.secondary-btn {
-  color: #888 !important;
-  font-size: 0.8rem;
-  transition: color 0.2s;
-}
-
-.secondary-btn:hover {
-  color: #555 !important;
-}
-
-/*日期选择部分浮动设置*/
-.date-picker-overlay {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 99999;
-  padding: 0px;
-  border-radius: 5px;
-}
-
-/* 日期选择器容器 */
-.date-picker-container {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 10000 !important;
-  width: 90%;
-  max-width: 600px;
-  isolation: isolate;
-}
-
 /* 日期选择卡片 */
 .date-picker-card {
   width: 100%;
@@ -412,22 +307,8 @@ const openComplainCard = () => {
   overflow-y: auto;
 }
 
-/* 背景遮罩 */
-.date-picker-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 9999;
-}
-
 /* 响应式调整 */
 @media (max-width: 600px) {
-  .date-picker-container {
-    width: 95%;
-  }
   .date-picker-card {
     max-height: 80vh;
   }

@@ -7,7 +7,7 @@ import AuthRoutes from "./auth.routes";
 export const routes = [
   {
     path: "/",
-    redirect: (to: any) => ({ path: "/dashboard", query: to.query }),
+    redirect: (to: any) => ({ path: "/houseList", query: to.query }),
     meta: {},
   } as any,
   {
@@ -26,14 +26,6 @@ export const routes = [
     },
     component: () => import("@/views/HouseListPage.vue"),
   },
-  {
-    path: "/house",
-    meta: {
-      requiresAuth: true,
-      layout: "landing",
-    },
-    component: () => import("@/views/HouseDetailPage.vue"),
-  },
   //管理员
   {
     path: "/admin",
@@ -42,7 +34,7 @@ export const routes = [
       roles: [0],
       layout: "landing",
     },
-    component: () => import("@/views/AdminPanelPage.vue"),
+    component: () => import("@/views/AdminUsersPage.vue"),
   },
   //房东发布房源界面：
   {
@@ -52,7 +44,7 @@ export const routes = [
       roles: [0, 2],
       layout: "landing",
     },
-    component: () => import("@/views/UploadHousePage.vue"),
+    component: () => import("@/views/HouseFormPage.vue"),
   },
   {
     path: "/landlordUpdate/:id",
@@ -61,7 +53,7 @@ export const routes = [
       roles: [0, 2],
       layout: "landing",
     },
-    component: () => import("@/views/UpdateHousePage.vue"),
+    component: () => import("@/views/HouseFormPage.vue"),
   },
   //房东的房源
   {
@@ -71,24 +63,40 @@ export const routes = [
       roles: [0, 2],
       layout: "landing",
     },
-    component: () => import("@/views/MyHousePage.vue"),
+    component: () => import("@/views/MyListingsPage.vue"),
   },
   {
-    path: "/house/:id",
+    path: "/houses/:id",
     meta: {
       requiresAuth: true,
       layout: "landing",
     },
     component: () => import("@/views/HouseDetailPage.vue"),
   },
-    {
-    path: "/landlord",
-    meta: {
-      requiresAuth: true,
-      roles: [0, 2],
-      layout: "landing",
-    },
-    component: () => import("@/views/LandlordPropertiesPage.vue"),
+  {
+    path: "/contract",
+    meta: { requiresAuth: true, layout: "landing" },
+    component: () => import("@/views/ContractPage.vue"),
+  },
+  {
+    path: "/houses/new",
+    meta: { requiresAuth: true, roles: [0, 2], layout: "landing" },
+    component: () => import("@/views/HouseFormPage.vue"),
+  },
+  {
+    path: "/houses/:id/edit",
+    meta: { requiresAuth: true, roles: [0, 2], layout: "landing" },
+    component: () => import("@/views/HouseFormPage.vue"),
+  },
+  {
+    path: "/my-listings",
+    meta: { requiresAuth: true, roles: [0, 2], layout: "landing" },
+    component: () => import("@/views/MyListingsPage.vue"),
+  },
+  {
+    path: "/admin/users",
+    meta: { requiresAuth: true, roles: [0], layout: "landing" },
+    component: () => import("@/views/AdminUsersPage.vue"),
   },
   {
     path: "/userManage",
@@ -97,19 +105,8 @@ export const routes = [
       roles: [0],
       layout: "landing",
     },
-    component: () => import("@/views/UserManagePage.vue"),
+    component: () => import("@/views/AdminUsersPage.vue"),
   },
-  {
-    path: "/ai/chatbot_v1",
-    component: () => import("@/views/ChatBotPage.vue"),
-    meta: {
-      requiresAuth: true,
-      layout: "landing",
-      // category: "AI",
-      title: "ChatBotV1",
-    },
-  },
-
   {
     path: "/profile",
     name: "profile",
@@ -128,54 +125,38 @@ export const routes = [
     component: () =>
       import(/* webpackChunkName: "error" */ "@/views/NotFoundPage.vue"),
   },
-{
-      path: "/chat",
-      meta: {
-        requiresAuth: true,
-        layout: "landing",
-      },
-      component: () => import("@/views/ChatPage.vue"),
+  {
+    path: "/alipay/payment-result",
+    meta: {
+      requiresAuth: false,
+      layout: "landing",
     },
-    {
-      path: "/payPay",
-      meta: {
-        requiresAuth: true,
-        layout: "landing",
-      },
-      component: () => import("@/views/PricingPage.vue"),
+    component: () => import("@/views/PaymentResultPage.vue"),
+  },
+  {
+    path: "/RentHouse",
+    meta: {
+      requiresAuth: true,
+      layout: "landing",
     },
-    {
-      path: "/contract",
-      meta: {
-        requiresAuth: true,
-        layout: "landing",
-      },
-      component: () => import("@/views/ContractPage.vue"),
+    component: () => import("@/views/AccountRentHousePage.vue"),
+  },
+  {
+    path: "/chat",
+    meta: {
+      requiresAuth: true,
+      layout: "landing",
     },
-    {
-      path: "/alipay/payment-result",
-      meta: {
-        requiresAuth: false,
-        layout: "landing",
-      },
-      component: () => import("@/views/PaymentResultPage.vue"),
+    component: () => import("@/views/ChatBotPage.vue"),
+  },
+  {
+    path: "/setpassword",
+    meta: {
+      requiresAuth: false,
+      layout: "landing",
     },
-    {
-      path: "/RentHouse",
-      meta: {
-        requiresAuth: true,
-        layout: "landing",
-      },
-      component: () => import("@/views/AccountRentHousePage.vue"),
-    },
-    {
-      path: "/setpassword",
-      meta: {
-        requiresAuth: true,
-        layout: "landing",
-      },
-      component: () => import("@/views/ResetPasswordPage.vue"),
-    },
+    component: () => import("@/views/ResetPasswordPage.vue"),
+  },
 
   ...AuthRoutes,
 

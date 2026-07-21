@@ -11,6 +11,7 @@ import { useCustomizeThemeStore } from "@/stores/customizeTheme";
 import ToolbarNotifications from "./ToolbarNotifications.vue";
 import ToolbarUser from "./ToolbarUser.vue";
 import ThemeToggle from "./ThemeToggle.vue";
+import { useAuthStore } from "@/stores/authStore";
 //search
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -33,6 +34,7 @@ const searchProduct = () => {
 };
 const { mdAndUp } = useDisplay();
 const customizeTheme = useCustomizeThemeStore();
+const authStore = useAuthStore();
 
 // 新增：fix-btn相关状态（如果需要）
 const variants = ['tonal']
@@ -81,11 +83,7 @@ const color = ref('indigo')
         @click="toggleFixCard"
       ></v-btn>-->
 
-      <ToolbarNotifications />
-      <v-btn icon @click="customizeTheme.themeDrawer = !customizeTheme.themeDrawer">
-        <v-icon>mdi-cart</v-icon>
-      </v-btn>
-
+      <ToolbarNotifications v-if="authStore.isAuthenticated" />
       <div class="d-flex">
         <ThemeToggle />
         <ToolbarUser />

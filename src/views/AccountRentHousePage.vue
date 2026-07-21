@@ -5,12 +5,9 @@
 -->
 <script setup lang="ts">
 import { useProfileStore } from "@/stores/profileStore";
-import { useFixCardStore } from "@/stores/fixCardStore";
 import { ref, computed, onMounted } from "vue";
 import apiClient from "@/api/client";
 
-import contract from "@/components/HouseRentCotract.vue";
-const showContractDialog = ref(false);
 // 定义房源类型
 interface RentalProperty {
   id: number;
@@ -29,29 +26,26 @@ interface RentalProperty {
 const profileStore = useProfileStore();
 const currentUser = ref(profileStore.user.name);
 
-// 获取报修卡片store
-const fixCardStore = useFixCardStore();
-
-// 当前选中的房源信息
-const selectedProperty = ref<RentalProperty | null>(null);
 
 // 房源数据
 const rentalProperties = ref<RentalProperty[]>([]);
 
 // 加载状态
 const loading = ref(false);
-const error = ref(null);
+const error = ref<string | null>(null);
 
 // 从后端获取房源数据
 const fetchRentalProperties = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const response = await apiClient.get(`/rental/tenants/${currentUser.value}`);
-    if (response.data.success && response.data.code === 200) {
-      // 转换数据格式并计算状态
-      rentalProperties.value = response.data.data.map(property => {
-        const currentDate = new Date(property.currentDate);
+    const response = await apiClient.get(`/leases/mine`);
+    const records = Array.isArray(response.data) ? response.data : [];
+    rentalProperties.value = records
+      .filter((record: any) => record.contract && record.house)
+      .map((record: any) => {
+        const property = { ...record.house, ...record.contract };
+        const currentDate = new Date();
         const startDate = new Date(property.startDate);
         const endDate = new Date(property.endDate);
         
@@ -63,21 +57,20 @@ const fetchRentalProperties = async () => {
         }
         
         return {
-          id: property.id,
-          title: property.title,
-          region: property.region,
+          id: record.house.id,
+          title: record.house.title,
+          region: record.house.region,
           purpose: property.purpose,
           startDate: property.startDate,
           endDate: property.endDate,
           status: status,
-          landlord_username: property.landlord_username,
+          landlord_username: property.landlordName,
           rentValue: property.rentValue,
           landlordPhone: property.landlordPhone
         };
       });
-    }
-  } catch (err) {
-    error.value = err.message || '获取房源数据失败';
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : '获取房源数据失败';
     console.error('获取房源数据失败:', err);
   } finally {
     loading.value = false;
@@ -95,10 +88,10 @@ const searchKey = ref("");
 const filteredProperties = computed(() => {
   return rentalProperties.value.filter(property => {
     return (
-      property.title.toLowerCase().includes(searchKey.value.toLowerCase()) ||
-      property.region.toLowerCase().includes(searchKey.value.toLowerCase()) ||
-      property.landlord_username.toLowerCase().includes(searchKey.value.toLowerCase()) ||
-      property.landlordPhone.toLowerCase().includes(searchKey.value.toLowerCase())
+      (property.title ?? "").toLowerCase().includes(searchKey.value.toLowerCase()) ||
+      (property.region ?? "").toLowerCase().includes(searchKey.value.toLowerCase()) ||
+      (property.landlord_username ?? "").toLowerCase().includes(searchKey.value.toLowerCase()) ||
+      (property.landlordPhone ?? "").toLowerCase().includes(searchKey.value.toLowerCase())
     );
   });
 });
@@ -117,13 +110,6 @@ const getStatusColor = (status: string) => {
   }
 };
 
-// 打开报修/投诉弹窗
-const openFixCard = (property: RentalProperty, type: 'repair' | 'complain') => {
-  selectedProperty.value = property;
-  fixCardStore.setCurrentProperty(property);
-  fixCardStore.setFixType(type);
-  fixCardStore.toggleFixCard();
-};
 </script>
 
 <template>
@@ -224,51 +210,6 @@ const openFixCard = (property: RentalProperty, type: 'repair' | 'complain') => {
               </div>
             </div>
             
-            <!-- 操作按钮 -->
-            <div class="d-flex flex-column">
-              <!-- 查看合同按钮 -->
-                <v-btn
-                    size="small"
-                    color="primary"
-                    variant="text"
-                    icon="mdi-file-document-edit-outline"
-                    title="查看合同"
-                    @click="showContractDialog = true"
-                ></v-btn>
-
-                <!-- 合同对话框 -->
-                <v-dialog v-model="showContractDialog" max-width="1200" scrollable>
-                    <contract :property="property" @close="showContractDialog = false" />
-                </v-dialog>
-              <v-btn
-                size="small"
-                color="error"
-                variant="text"
-                icon="mdi-delete-outline"
-                title="退租申请"
-                class="mt-2"
-              ></v-btn>
-              <!-- 申报维修按钮 -->
-              <v-btn
-                size="small"
-                color="warning"
-                variant="text"
-                icon="mdi-tools"
-                title="申报维修"
-                class="mt-2"
-                @click="openFixCard(property, 'repair')"
-              ></v-btn>
-              <!-- 投诉按钮 -->
-              <v-btn
-                size="small"
-                color="error"
-                variant="text"
-                icon="mdi-alert-circle-outline"
-                title="投诉"
-                class="mt-2"
-                @click="openFixCard(property, 'complain')"
-              ></v-btn>
-            </div>
           </div>
         </v-card>
       </transition-group>

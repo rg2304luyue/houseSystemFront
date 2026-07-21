@@ -5,7 +5,7 @@
 -->
 
 <script setup lang="ts">
-import axios from "axios";
+import apiClient from "@/api/client";
 import { Ref } from "vue";
 import type { EChartsOption } from "echarts";
 import { useChart, RenderType, ThemeType } from "@/plugins/echarts";
@@ -20,8 +20,8 @@ const dataSet = ref([
 ]);
 const fetchdataSets = async () => {
   try {
-    const response = await axios.get("/houseinfo/piedata");
-    dataSet.value = response.data.data; // 假设返回的是数组
+    const response = await apiClient.get("/houses/stats/pie");
+    dataSet.value = response.data; // 响应拦截器已解包
   } catch (error) {
     console.error("获取数据失败:", error);
   }

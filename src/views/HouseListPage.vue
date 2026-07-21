@@ -143,7 +143,15 @@
       </v-row>
     </v-card>
 
-    <div class="list-container pa-0 pt-5"> <div v-if="loading" class="text-center my-10">
+    <div class="list-container pa-0 pt-5">
+      <v-progress-linear
+        v-if="loading && hasLoaded"
+        indeterminate
+        color="primary"
+        class="results-progress"
+      ></v-progress-linear>
+
+      <div v-if="loading && !hasLoaded" class="text-center my-10">
         <v-progress-circular indeterminate color="primary" size="50"></v-progress-circular>
         <p class="mt-3 text-grey-darken-1">正在加载房源数据...</p>
       </div>
@@ -335,6 +343,7 @@ import { ref, onMounted, reactive, watch } from 'vue';
 import { useRouter } from 'vue-router';
 // Import the actual config type with a different name to avoid conflict with component's filter state type
 import { fetchHouses, type HouseInfo, type HouseFilters as ApiHouseFiltersConfig, type PaginatedHouseResponse } from '@/api/houseApi';
+import apiClient from '@/api/client';
 
 const router = useRouter();
 
@@ -365,6 +374,8 @@ const searchFilters = reactive<ComponentSearchFilters>({
 
 const houses = ref<HouseInfo[]>([]);
 const loading = ref(true); // Start with loading true
+const hasLoaded = ref(false);
+let latestRequestId = 0;
 const pagination = reactive({
   page: 1,
   per_page: searchFilters.per_page, // Align with searchFilters
@@ -447,7 +458,7 @@ const applyCustomPriceRange = () => {
 }
 
 const loadHouses = async () => {
-  isLoadingInternal = true;
+  const requestId = ++latestRequestId;
   loading.value = true;
   try {
     // Prepare API parameters from component's searchFilters state
@@ -475,35 +486,44 @@ const loadHouses = async () => {
     // If you add them, ensure they are converted to 0/1 if backend expects numbers.
 
     const response = await fetchHouses(apiParams);
+    if (requestId !== latestRequestId) return;
+
     houses.value = response.items;
     pagination.total = response.total;
     pagination.pages = response.pages;
-    pagination.page = response.page; // Sync with backend's current page
     pagination.per_page = response.per_page;
 
   } catch (error) {
+    if (requestId !== latestRequestId) return;
     console.error("Failed to load houses in component:", error);
-    houses.value = []; // Clear houses on error
-    pagination.total = 0;
-    pagination.pages = 0;
+    if (!hasLoaded.value) {
+      houses.value = [];
+      pagination.total = 0;
+      pagination.pages = 0;
+    }
     // snackbarStore.showErrorMessage('加载房源失败，请稍后再试');
   } finally {
-    loading.value = false;
-    isLoadingInternal = false;
+    if (requestId === latestRequestId) {
+      loading.value = false;
+      hasLoaded.value = true;
+    }
   }
 };
 
 // 改后：只有用户手动翻页才触发，loadHouses 内部同步 page 不触发
-let isLoadingInternal = false;
 watch(() => pagination.page, (newPage, oldPage) => {
-  if (newPage !== oldPage && !isLoadingInternal) {
+  if (newPage !== oldPage) {
     loadHouses();
   }
 });
 
 const applyFiltersAndResetPage = () => {
-  pagination.page = 1; // Reset to first page when filters change
-  loadHouses();
+  if (pagination.page === 1) {
+    loadHouses();
+  } else {
+    // The pagination watcher performs the request after resetting the page.
+    pagination.page = 1;
+  }
 };
 
 const resetFilters = () => {
@@ -523,15 +543,8 @@ const resetFilters = () => {
   applyFiltersAndResetPage();
 };
 
-const handlePageChange = (newPage: number) => {
-  if (pagination.page !== newPage) {
-    pagination.page = newPage;
-    loadHouses();
-  }
-};
-
 const goToHouseDetail = (houseId: number) => {
-  router.push(`/house/${houseId}`); // Ensure this route is defined in your router
+  router.push(`/houses/${houseId}`);
 };
 
 // 添加热门推荐房源的接口类型
@@ -559,11 +572,9 @@ const loadingRecommendation = ref(false);
 const fetchRecommendedHouse = async () => {
   loadingRecommendation.value = true;
   try {
-    const response = await fetch('/houseinfo/views');
-    const data = await response.json();
-    if (data.success && data.code === 200) {
-      recommendedHouse.value = data.data;
-    }
+    const response = await apiClient.get('/houses/most-viewed');
+    // 响应拦截器已自动解包 {code,data,message,success}，response.data 即为推荐房源对象
+    recommendedHouse.value = response.data;
   } catch (error) {
     console.error('获取热门推荐失败:', error);
   } finally {
@@ -600,7 +611,14 @@ onMounted(async () => {
   transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
 }
 .list-container {
-  /* If you need specific styling for the list area */
+  position: relative;
+}
+.results-progress {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  right: 0;
+  z-index: 2;
 }
 .recommendation-card {
   border: 1px solid #e0e0e0;
