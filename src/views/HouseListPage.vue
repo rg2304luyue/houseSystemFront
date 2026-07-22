@@ -628,8 +628,12 @@ onMounted(async () => {
 <style scoped lang="scss">
 // Scoped SCSS can go here if needed, original styles were mostly CSS
 .house-image {
-  border: 1px solid #eee; 
+  border: 1px solid var(--house-line);
+  transition: transform .35s ease;
 }
+.house-card { border-radius: 16px; overflow: hidden; transition: transform .22s ease, box-shadow .22s ease; }
+.house-card:hover { transform: translateY(-3px); box-shadow: 0 18px 34px rgba(23, 63, 58, .12) !important; }
+.house-card:hover .house-image { transform: scale(1.025); }
 .house-title-clamp {
   display: -webkit-box;
   -webkit-line-clamp: 1; 

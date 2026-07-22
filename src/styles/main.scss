@@ -7,4 +7,23 @@
 @import "./common/animation.scss";
 @import "./common/beautify.scss";
 @import "vue3-perfect-scrollbar/dist/vue3-perfect-scrollbar.css";
-@import './pages/editor';
+
+:root {
+  --house-ink: #17212b;
+  --house-forest: #0f766e;
+  --house-paper: #f7f9fc;
+  --house-coral: #0f766e;
+  --house-line: #e3e8ef;
+  --house-surface: #ffffff;
+}
+
+body { background: var(--house-paper); color: var(--house-ink); }
+.v-application { font-family: "Noto Serif SC", "Source Han Serif SC", serif; background: var(--house-paper) !important; }
+.v-app-bar { background: rgba(255, 255, 255, .94) !important; border-bottom: 1px solid var(--house-line) !important; backdrop-filter: blur(14px); }
+.v-navigation-drawer { background: #27313d !important; color: #f4f7fb !important; }
+.v-navigation-drawer .v-list-item { border-radius: 10px; margin: 4px 10px; }
+.v-navigation-drawer .v-list-item:hover { background: rgba(255,255,255,.07); }
+.v-navigation-drawer .v-list-item--active { background: #3b495a; }
+.v-navigation-drawer .v-list-item__prepend, .v-navigation-drawer .v-list-item-title { color: inherit !important; }
+.v-card { border: 1px solid var(--house-line); box-shadow: 0 12px 30px rgba(23, 33, 43, .06) !important; }
+.v-btn--variant-elevated { box-shadow: none !important; }

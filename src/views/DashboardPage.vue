@@ -1,129 +1,59 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed } from "vue";
+import { useProfileStore } from "@/stores/profileStore";
 
-// 导入News组件
-import News from "@/components/HouseDetail/News.vue";
-
-// 其它组件导入
-import BannerPage from "@/components/dashboard/BannerPage.vue";
-import Footer1 from "@/components/footer/Footer1.vue";
-import HouseCard from "~/src/components/dashboard/HouseCard.vue";
-import CityCard from "~/src/components/dashboard/CityCard.vue";
-import SecondHandHouse from "~/src/components/dashboard/SecondHandHouse.vue";
-import NewHouseList from "~/src/components/dashboard/NewHouseList.vue";
-
-// 导入fixCardStore
-import { useFixCardStore } from '@/stores/fixCardStore'
-
-const fixCardStore = useFixCardStore()
-const color = ref('indigo')
-const variant = ref('tonal')
-
-import { useRoute } from 'vue-router'
-
-const route = useRoute()
-const paymentSnackbar = ref(false)
-const paymentMessage = ref('')
-
-onMounted(() => {
-  console.log("Dashboard mounted");
-
-  const paymentStatus = route.query.payment
-  if (paymentStatus === 'success') {
-    paymentMessage.value = '支付成功！您的合同已生效。'
-    paymentSnackbar.value = true
-  } else if (paymentStatus === 'failure') {
-    paymentMessage.value = '支付验证失败，请联系客服。'
-    paymentSnackbar.value = true
-  }
-});
+const profileStore = useProfileStore();
+const userType = computed(() => Number(profileStore.user?.userType));
+const isLandlord = computed(() => [0, 2].includes(userType.value));
+const userName = computed(() => profileStore.user?.name || "你好");
 </script>
 
 <template>
-  <div class="pa-5">
-    <!-- 支付结果提示 -->
-    <v-snackbar
-      v-model="paymentSnackbar"
-      :color="paymentMessage.includes('成功') ? 'success' : 'error'"
-      timeout="5000"
-      location="top"
-    >
-      {{ paymentMessage }}
-      <template #actions>
-        <v-btn variant="text" @click="paymentSnackbar = false">关闭</v-btn>
-      </template>
-    </v-snackbar>
+  <section class="dashboard-page pa-4 pa-md-8">
+    <div class="dashboard-intro">
+      <p class="eyebrow">HAOKE RENTAL</p>
+      <h1>{{ userName }}，欢迎回来</h1>
+      <p>从这里开始处理今天的租房事务。</p>
+    </div>
 
-    <!-- 顶端放新闻组件 -->
-    
-    <!-- BannerPage -->
-    <v-row class="flex-0" dense>
-      <v-col cols="12" xl="4" class="full-width-banner">
-        <BannerPage></BannerPage>
+    <v-row class="mt-2" dense>
+      <v-col cols="12" md="7">
+        <v-card class="dashboard-card pa-6 h-100" rounded="xl" elevation="0">
+          <div class="d-flex align-start justify-space-between ga-4">
+            <div>
+              <p class="card-kicker">快速开始</p>
+              <h2>{{ isLandlord ? "管理你的房源" : "找到合适的住处" }}</h2>
+              <p class="mt-2 text-medium-emphasis">
+                {{ isLandlord ? "查看已发布房源和租约进度。" : "浏览房源，或把你的需求交给 AI 助手。" }}
+              </p>
+            </div>
+            <v-icon color="primary" size="42">mdi-home-heart</v-icon>
+          </div>
+          <div class="d-flex flex-wrap ga-3 mt-6">
+            <v-btn color="primary" to="/houseList" prepend-icon="mdi-home-search-outline">浏览房源</v-btn>
+            <v-btn variant="outlined" color="primary" to="/chat" prepend-icon="mdi-sparkles">咨询 AI 助手</v-btn>
+            <v-btn v-if="isLandlord" variant="text" color="primary" to="/my-listings">我的房源</v-btn>
+          </div>
+        </v-card>
+      </v-col>
+      <v-col cols="12" md="5">
+        <v-card class="dashboard-card dashboard-note pa-6 h-100" rounded="xl" elevation="0">
+          <p class="card-kicker">租住服务</p>
+          <h2>一处清晰的开始</h2>
+          <p class="mt-3 text-medium-emphasis">找房、沟通与租约管理都保留在熟悉的位置；不需要从筛选页开始。</p>
+          <v-btn class="mt-5" variant="text" color="primary" to="/contract" append-icon="mdi-arrow-right">查看我的租约</v-btn>
+        </v-card>
       </v-col>
     </v-row>
-    
-    <v-row class="flex-0" dense>
-      <v-col cols="12" xl="4">
-        <CityCard></CityCard>
-      </v-col>
-      <v-col cols="12" xl="4">
-       <News/>
-      </v-col>
-    </v-row>
-    
-    <v-row class="flex-0" dense>
-      <v-col cols="12" xl="4">
-        <SecondHandHouse></SecondHandHouse>
-      </v-col>
-    </v-row>
-    
-    <v-row class="flex-0" dense>
-      <v-col cols="12" xl="4">
-        <NewHouseList></NewHouseList>
-      </v-col>
-      
-    </v-row>
-    
-    <v-row class="flex-0" dense>
-      <v-col cols="12" xl="4">
-        <Footer1></Footer1>
-      </v-col>
-    </v-row>
-  </div>
+  </section>
 </template>
 
-<style lang="scss" scoped></style>
 <style scoped>
-.fixed-card {
-  position: fixed;
-  top: 20px; /* 位于 AppBar 下方 */
-  left: 50%;
-  transform: translateX(-50%);
-  width: 400px;
-  z-index: 1000; /* 确保在最上层 */
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-}
-
-.full-width-banner :deep(.v-card) {
-  width: 100vw !important; /* 强制宽度为100%视口宽度 */
-  margin-top: 0% !important; /* 去除顶部间距 */
-  position: relative !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-
-  /* 覆盖 v-card 可能存在的边距和圆角 */
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  border-radius: 0 !important;
-  
-  /* 保留你之前CSS中的垂直边距，如果这是你想要的效果 */
-  margin-top: 2.5rem; 
-  margin-bottom: 2.5rem;
-
-  /* 通常全屏背景 Banner 不需要额外的阴影和内边距 */
-  box-shadow: none !important;
-  padding: 0 !important; 
-}
-
+.dashboard-page { max-width: 1180px; margin: 0 auto; }
+.dashboard-intro { padding: 20px 0 12px; }
+.dashboard-intro h1, h2 { color: #17212b; letter-spacing: -.02em; }
+.dashboard-intro h1 { font-size: clamp(2rem, 4vw, 3rem); }
+.eyebrow, .card-kicker { color: #0f766e; font-size: .72rem; font-weight: 800; letter-spacing: .13em; }
+.dashboard-card { background: #fff; min-height: 250px; }
+.dashboard-note { background: #f0f7f7; }
 </style>

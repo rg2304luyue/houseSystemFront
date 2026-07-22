@@ -587,7 +587,7 @@ onUnmounted(() => {
 }
 
 .chat-bot {
-  background-repeat: repeat;
+  background: radial-gradient(circle at top right, rgba(207, 93, 62, .10), transparent 32%), var(--house-paper);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -605,10 +605,11 @@ onUnmounted(() => {
     align-items: center;
 
     .input-panel {
-      border-radius: 5px;
+      border: 1px solid var(--house-line);
+      border-radius: 18px;
       max-width: 1200px;
       margin: 0 auto;
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.94);
       backdrop-filter: blur(10px);
     }
   }

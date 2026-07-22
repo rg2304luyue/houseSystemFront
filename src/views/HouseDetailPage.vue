@@ -52,7 +52,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="pa-5">
+  <div class="detail-page pa-4 pa-md-7">
     <v-skeleton-loader v-if="loading" type="card, article" />
     <v-alert v-else-if="errorMessage" type="error" variant="tonal">{{ errorMessage }}</v-alert>
     <v-row v-else-if="house" class="flex-0" dense>
@@ -71,3 +71,7 @@ onMounted(async () => {
     </v-row>
   </div>
 </template>
+
+<style scoped>
+.detail-page { max-width: 1440px; margin: 0 auto; }
+</style>

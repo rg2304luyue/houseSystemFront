@@ -75,7 +75,7 @@ export const useAuthStore = defineStore("auth", {
         const profileStore = useProfileStore();
         profileStore.setUser(profileRes.data);
 
-        window.location.href = "/dashboard";
+        router.replace("/dashboard");
       } catch (error: any) {
         const errorMsg = error?.response?.data?.detail || error?.response?.data?.message || error.message;
         console.error("请求异常：", errorMsg);
@@ -96,7 +96,7 @@ export const useAuthStore = defineStore("auth", {
         const profileStore = useProfileStore();
         profileStore.setUser(profileRes.data);
 
-        window.location.href = "/dashboard";
+        router.replace("/dashboard");
       } catch (error: any) {
         const errorMsg = error?.response?.data?.detail || error?.response?.data?.message || error.message;
         console.error("邮箱登录请求异常：", errorMsg);

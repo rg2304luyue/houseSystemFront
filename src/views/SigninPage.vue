@@ -198,7 +198,7 @@ const handleEmailCodeLogin = async () => {
       const ProfileStore = useProfileStore();
       ProfileStore.setUser(profileRes.data);
 
-      window.location.href = "/dashboard";
+      router.replace("/dashboard");
     } catch (err: any) {
       console.error("邮箱验证码登录出错", err);
       error.value = true;

@@ -7,15 +7,12 @@ import AuthRoutes from "./auth.routes";
 export const routes = [
   {
     path: "/",
-    redirect: (to: any) => ({ path: "/houseList", query: to.query }),
+    redirect: (to: any) => ({ path: "/dashboard", query: to.query }),
     meta: {},
   } as any,
   {
     path: "/dashboard",
-    meta: {
-      requiresAuth: true,
-      layout: "landing",
-    },
+    meta: { requiresAuth: true, layout: "landing" },
     component: () => import("@/views/DashboardPage.vue"),
   },
   {
@@ -37,34 +34,7 @@ export const routes = [
     component: () => import("@/views/AdminUsersPage.vue"),
   },
   //房东发布房源界面：
-  {
-    path: "/landlordUpload",
-    meta: {
-      requiresAuth: true,
-      roles: [0, 2],
-      layout: "landing",
-    },
-    component: () => import("@/views/HouseFormPage.vue"),
-  },
-  {
-    path: "/landlordUpdate/:id",
-    meta: {
-      requiresAuth: true,
-      roles: [0, 2],
-      layout: "landing",
-    },
-    component: () => import("@/views/HouseFormPage.vue"),
-  },
   //房东的房源
-  {
-    path: "/myHouse",
-    meta: {
-      requiresAuth: true,
-      roles: [0, 2],
-      layout: "landing",
-    },
-    component: () => import("@/views/MyListingsPage.vue"),
-  },
   {
     path: "/houses/:id",
     meta: {
@@ -79,33 +49,9 @@ export const routes = [
     component: () => import("@/views/ContractPage.vue"),
   },
   {
-    path: "/houses/new",
-    meta: { requiresAuth: true, roles: [0, 2], layout: "landing" },
-    component: () => import("@/views/HouseFormPage.vue"),
-  },
-  {
-    path: "/houses/:id/edit",
-    meta: { requiresAuth: true, roles: [0, 2], layout: "landing" },
-    component: () => import("@/views/HouseFormPage.vue"),
-  },
-  {
     path: "/my-listings",
     meta: { requiresAuth: true, roles: [0, 2], layout: "landing" },
     component: () => import("@/views/MyListingsPage.vue"),
-  },
-  {
-    path: "/admin/users",
-    meta: { requiresAuth: true, roles: [0], layout: "landing" },
-    component: () => import("@/views/AdminUsersPage.vue"),
-  },
-  {
-    path: "/userManage",
-    meta: {
-      requiresAuth: true,
-      roles: [0],
-      layout: "landing",
-    },
-    component: () => import("@/views/AdminUsersPage.vue"),
   },
   {
     path: "/profile",
