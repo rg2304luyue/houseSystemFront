@@ -20,14 +20,12 @@ import defaultAvatar from "@/assets/images/avatars/avatar_user.jpg";
 const isCropperOpen = ref(false);
 // 3. 准备处理上传的函数，它会接收子组件传来的 blob 和 done 回调
 const onAvatarUpload = async (blob: Blob, done: () => void) => {
-  console.log("收到裁剪后的Blob，开始新的两步上传流程...", blob);
   // 1. 将收到的 Blob 包装成 File 对象，准备上传到OSS
   const avatarFile = new File([blob], "avatar.jpg", { type: "image/jpeg" });
   const ossFormData = new FormData();
   ossFormData.append("avatar", avatarFile);
   try {
     // --- 步骤 1: 上传图片到 OSS 接口 ---
-    console.log("步骤1: 正在上传图片到OSS...");
     const ossResponse = await apiClient.post(
       '/users/me/avatar',
       ossFormData,
@@ -37,10 +35,8 @@ const onAvatarUpload = async (blob: Blob, done: () => void) => {
     );
 
     const newAvatarUrl = ossResponse.data.avatarUrl;
-    console.log("步骤1成功: 获取到新的OSS URL:", newAvatarUrl);
 
     // 上传接口已经持久化头像，不再重复更新用户资料。
-    console.log("步骤2成功: 用户信息已更新");
     snackbarStore.showSuccessMessage('头像更新成功！');
     
     // 更新 Pinia Store，让页面上的头像立刻变化
@@ -90,11 +86,6 @@ const passwords = reactive({
 const currentPasswordShow = ref(false);
 const newPasswordShow = ref(false);
 const confirmPasswordShow = ref(false);
-
-onMounted(() => {
-  console.log("user", user);
-  console.log("userStore", profileStore.user.addr);
-});
 
 const router = useRouter();
 const navigateToRent = () => {

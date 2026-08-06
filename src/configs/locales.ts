@@ -8,8 +8,8 @@ let locale = "en";
 try {
   const { 0: browserLang } = navigator.language.split("-");
   if (supported.includes(browserLang)) locale = browserLang;
-} catch (e) {
-  console.log(e);
+} catch {
+  // Keep the default locale when browser language detection is unavailable.
 }
 
 export default {

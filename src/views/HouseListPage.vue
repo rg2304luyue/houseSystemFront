@@ -584,7 +584,6 @@ const fetchRecommendedHouse = async () => {
 
 onMounted(async () => {
   await Promise.all([loadHouses(), fetchRecommendedHouse()]);
-  console.log("Houses data after initial load:", houses.value);
 });
 
 </script>

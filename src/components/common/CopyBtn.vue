@@ -22,7 +22,6 @@ const props = defineProps({
 
 // Copy Text
 const copyText = (event: Event) => {
-  console.log(props.text);
   clipboard(props.text, event);
 
   snackbar.value = true;

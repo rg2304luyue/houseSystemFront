@@ -74,26 +74,12 @@ const selectedDate = ref<Date | null>(null);
 
 const onDateSelected = async (date: Date | null) => {
   if (!date) return;
-  console.log("选择的日期是：", date);
-
-  const token = localStorage.getItem('token');
-  let username = '';
-  if (token) {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      username = payload.phone || payload.email || payload.user_id || '';
-    } catch (e) {
-      console.error('token解析失败', e);
-    }
-  }
-
   try {
-    const response = await apiClient.post('/appointments', {
+    await apiClient.post('/appointments', {
       time: date instanceof Date ? date.toISOString() : new Date(date).toISOString(),
       property: props.house.title
     });
 
-    console.log('后端响应:', response.data);
     alert('预约日期提交成功！');
     showDatePicker.value = false;
   } catch (error) {

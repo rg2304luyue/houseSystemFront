@@ -33,7 +33,6 @@ const handleRegister = async () => {
       isSignInDisabled.value = false;
     }
   } else {
-    console.log("no");
   }
 };
 

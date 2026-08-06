@@ -14,7 +14,6 @@ import "@/styles/main.scss";
 import router from "./router";
 import i18n from "./plugins/i18n";
 import "vue3-lottie/dist/style.css";
-import Vue3Lottie from "vue3-lottie";
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import 'vue-advanced-cropper/dist/style.css';
 const pinia = createPinia();
@@ -25,6 +24,5 @@ app.use(pinia);
 app.use(router);
 app.use(PerfectScrollbar);
 app.use(i18n);
-app.use(Vue3Lottie, { name: "LottieAnimation" });
 app.use(vuetify);
 app.mount("#app");
