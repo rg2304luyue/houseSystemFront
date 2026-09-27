@@ -45,22 +45,46 @@ onUnmounted(() => {
 });
 </script>
 <template>
-  <v-card class="pa-5">
-    <h1 class="text-h5 font-weight-bold">Please verify the email</h1>
-    <div class="mb-5 text-grey text-caption">
-      Please check your email for the link to verify the email.
+  <div class="auth-form text-center">
+    <div class="verify-icon mx-auto mb-5">
+      <v-icon size="36" color="primary">mdi-email-fast-outline</v-icon>
     </div>
+    <h1 class="auth-title">请验证您的邮箱</h1>
+    <p class="house-muted mt-2 mb-6">
+      验证链接已发送至您的邮箱，请前往邮箱点击链接完成验证。<br />
+      没有收到？请检查垃圾邮件，或稍后重新发送。
+    </p>
     <v-btn
-      class="text-capitalize"
       block
       color="primary"
-      size="x-large"
+      variant="flat"
+      size="large"
+      class="font-weight-bold"
       :loading="isLoading"
       :disabled="disabled"
       @click="resend"
-      >Re-send email{{ seconds }}
+      >重新发送邮件{{ seconds }}
     </v-btn>
-  </v-card>
+    <div class="mt-6 text-body-2">
+      <router-link to="/auth/signin" class="text-primary">返回登录</router-link>
+    </div>
+  </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.auth-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--house-ink);
+}
+
+.verify-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--house-soft);
+}
+</style>

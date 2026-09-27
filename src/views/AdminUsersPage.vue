@@ -93,12 +93,6 @@ watch(
   }
 );
 
-const paginatedUsers = computed(() => {
-  const start = (queryOptions.page - 1) * queryOptions.per_page;
-  const end = start + queryOptions.per_page;
-  return filteredUsersList.value.slice(start, end);
-});
-
 const onUpdateOptions = (options: any) => {
   queryOptions.per_page = options.itemsPerPage;
   queryOptions.page = options.page;
@@ -153,51 +147,54 @@ onMounted(() => {
 </script>
 
 <template>
-  <v-container>
+  <div class="admin-users">
     <v-card>
-      <v-card-title class="font-weight-bold">
-        <span>
-          <v-icon class="mr-2">mdi-account-group</v-icon>
-          用户管理
-        </span>
-        <v-spacer></v-spacer>
-        <div class="w-25">
-          <v-text-field
-            v-model="queryOptions.query"
-            variant="solo"
-            prepend-inner-icon="mdi-magnify"
-            label="搜索用户"
-            single-line
-            hide-details
-            clearable
-            density="compact"
-          ></v-text-field>
+      <div class="admin-head">
+        <div class="d-flex align-center ga-3">
+          <span class="head-icon">
+            <v-icon size="22" color="primary">mdi-account-group-outline</v-icon>
+          </span>
+          <div>
+            <h1 class="text-h6 font-weight-bold">用户管理</h1>
+            <p class="text-body-2 house-muted">共 {{ filteredUsersList.length }} 位用户</p>
+          </div>
         </div>
-      </v-card-title>
+        <v-text-field
+          v-model="queryOptions.query"
+          class="admin-search"
+          variant="outlined"
+          prepend-inner-icon="mdi-magnify"
+          placeholder="搜索用户名、邮箱、电话或地址"
+          single-line
+          hide-details
+          clearable
+          density="compact"
+        ></v-text-field>
+      </div>
       <v-divider />
       <v-card-text class="pa-0">
         <v-data-table
+          class="admin-table"
           :headers="headers"
-          :items="paginatedUsers"
+          :items="filteredUsersList"
           :loading="loading"
           :items-per-page="queryOptions.per_page"
-          :items-length="filteredUsersList.length"
           item-value="id"
           @update:options="onUpdateOptions"
           fixed-header
-          height="700"
         >
           <template v-slot:item="{ item }">
             <tr>
               <td class="font-weight-bold">{{ item.id }}</td>
               <td>
-                <v-avatar size="35">
+                <v-avatar size="36" color="surface-variant">
                   <v-img
                     v-if="item.avatarUrl"
                     :src="item.avatarUrl"
                     alt="avatar"
+                    cover
                   />
-                  <v-icon v-else size="35" color="grey">
+                  <v-icon v-else size="36" class="text-medium-emphasis">
                     mdi-account-circle
                   </v-icon>
                 </v-avatar>
@@ -208,12 +205,13 @@ onMounted(() => {
               <td>
                 <CopyLabel :text="item.email" />
               </td>
-              <td>{{ item.phone || "未填写" }}</td>
-              <td>{{ item.addr || "未填写" }}</td>
+              <td :class="{ 'house-muted': !item.phone }">{{ item.phone || "未填写" }}</td>
+              <td :class="{ 'house-muted': !item.addr }">{{ item.addr || "未填写" }}</td>
               <td class="text-body-2">{{ formatIdCard(item.identityCard) }}</td>
               <td>
                 <v-chip
                   size="small"
+                  variant="tonal"
                   :color="getUserTypeLabel(item.userType).color"
                   class="font-weight-bold"
                 >
@@ -230,16 +228,16 @@ onMounted(() => {
                   :disabled="item.userType === 0"
                   title="删除用户"
                 >
-                  <v-icon>mdi-delete</v-icon>
+                  <v-icon>mdi-delete-outline</v-icon>
                 </v-btn>
               </td>
             </tr>
           </template>
 
           <template v-slot:no-data>
-            <div class="text-center py-5">
-              <v-icon size="48" color="grey">mdi-account-off</v-icon>
-              <p class="text-grey mt-2">暂无用户数据</p>
+            <div class="house-empty">
+              <v-icon>mdi-account-off-outline</v-icon>
+              <p>暂无用户数据</p>
             </div>
           </template>
 
@@ -258,19 +256,19 @@ onMounted(() => {
     <!-- Delete confirmation dialog -->
     <v-dialog v-model="deleteDialog" max-width="400">
       <v-card>
-        <v-card-title class="text-h6">
-          <v-icon class="mr-2" color="error">mdi-alert</v-icon>
+        <v-card-title class="d-flex align-center text-h6 font-weight-bold pt-5 px-6">
+          <v-icon class="mr-2" color="error">mdi-alert-outline</v-icon>
           确认删除
         </v-card-title>
-        <v-card-text>
+        <v-card-text class="px-6">
           确定要删除用户
           <strong>{{ selectedUser?.name }}</strong>
           (ID: {{ selectedUser?.id }}) 吗？此操作不可撤销。
         </v-card-text>
-        <v-card-actions>
+        <v-card-actions class="px-6 pb-5">
           <v-spacer></v-spacer>
           <v-btn variant="text" @click="deleteDialog = false">取消</v-btn>
-          <v-btn color="error" variant="elevated" @click="deleteUser">
+          <v-btn color="error" variant="flat" @click="deleteUser">
             确认删除
           </v-btn>
         </v-card-actions>
@@ -278,18 +276,56 @@ onMounted(() => {
     </v-dialog>
 
     <!-- Snackbar -->
-    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000" location="top">
       {{ snackbar.message }}
     </v-snackbar>
-  </v-container>
+  </div>
 </template>
 
 <style lang="scss" scoped>
-:deep(.v-data-table) {
-  .v-data-table__tr {
-    &:hover {
-      background-color: rgba(0, 0, 0, 0.02);
-    }
+.admin-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+.head-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--house-soft);
+}
+
+.admin-search {
+  flex: 0 1 320px;
+  min-width: 220px;
+}
+
+.admin-table {
+  :deep(.v-table__wrapper) {
+    max-height: calc(100vh - 300px);
+    min-height: 240px;
+  }
+
+  :deep(thead th) {
+    font-weight: 600 !important;
+    color: var(--house-muted) !important;
+    white-space: nowrap;
+  }
+
+  :deep(tbody tr:hover) {
+    background-color: var(--house-soft);
+  }
+}
+
+@media (max-width: 599px) {
+  .admin-search {
+    flex-basis: 100%;
   }
 }
 </style>

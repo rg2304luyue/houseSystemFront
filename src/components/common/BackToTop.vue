@@ -33,7 +33,7 @@ const scrollToTop = () => {
 <style scoped lang="scss">
 .back-to-top {
   position: fixed;
-  background-color: #705cf6;
+  background-color: var(--house-forest);
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s ease;
@@ -42,11 +42,11 @@ const scrollToTop = () => {
   z-index: 999;
   padding: 0.5rem;
   border-radius: 0.5rem;
-  box-shadow: 1px 1px 9px #705cf6;
+  box-shadow: 1px 1px 9px var(--house-forest);
   transition: all 0.5s;
   cursor: pointer;
   &:hover {
-    box-shadow: 1px 1px 18px #705cf6;
+    box-shadow: 1px 1px 18px var(--house-forest);
     transition: all 0.5s;
   }
 }

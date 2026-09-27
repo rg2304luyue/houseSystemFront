@@ -1,7 +1,8 @@
 // src/api/client.ts
-// 统一 Axios 实例 —— 本地开发走 Vite proxy，Docker 走 Nginx proxy
+// 统一 Axios 实例 —— 本地开发走 Vite proxy，部署时由 Web 服务器提供同源反向代理
 // 所有 API 调用请使用相对路径（如 /houses），baseURL 统一为 /api/v1
 import axios from "axios";
+import { clearAuthArtifacts, readAccessToken, safeRedirectTarget } from "@/utils/authSession";
 
 const apiClient = axios.create({
   baseURL: "/api/v1",
@@ -13,13 +14,9 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // 从 localStorage 读取 token
-    const token =
-      localStorage.getItem("token") ||
-      localStorage.getItem("accessToken") ||
-      localStorage.getItem("userToken");
+    const token = readAccessToken();
     if (token) {
-      const raw = token.startsWith('"') ? JSON.parse(token) : token;
-      config.headers.Authorization = `Bearer ${raw}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -36,19 +33,25 @@ apiClient.interceptors.response.use(
         response.data = body.data;
         return response;
       }
-      return Promise.reject(
-        new Error(body.message || "请求失败")
-      );
+      const apiError = new Error(body.message || "请求失败") as Error & { code?: number; response?: unknown; data?: unknown };
+      apiError.code = body.code;
+      apiError.data = body;
+      return Promise.reject(apiError);
     }
     return response;
   },
   (error) => {
     // 401 拦截：清除 token 并跳转到登录页
-    if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userToken");
-      window.location.href = "/auth/signin";
+    // 登录/注册等 auth 接口的 401 属于业务失败（密码或验证码错误），
+    // 交由调用方展示错误信息，不做全局跳转。
+    const requestUrl: string = error.config?.url ?? "";
+    const isBusinessAuthCall = /^\/?(auth|users\/password-reset)\//.test(requestUrl);
+    const isOnSignin = window.location.pathname.startsWith("/auth/signin");
+    if (error.response?.status === 401 && !isBusinessAuthCall && !isOnSignin) {
+      clearAuthArtifacts();
+      const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      const redirect = safeRedirectTarget(current);
+      window.location.href = `/auth/signin?redirect=${encodeURIComponent(redirect)}`;
     }
     return Promise.reject(error);
   }

@@ -4,9 +4,11 @@ import { useAuthStore } from "@/stores/authStore";
 import apiClient from "@/api/client";
 import router from "~/src/router";
 import { nextTick, ref, onUnmounted } from 'vue';
-import { useProfileStore } from "@/stores/profileStore";
+import { useRoute } from "vue-router";
+import { safeRedirectTarget } from "@/utils/authSession";
 
 const authStore = useAuthStore();
+const route = useRoute();
 const isLoading = ref(false);
 const isSignInDisabled = ref(false);
 const isEmailCodeLoading = ref(false);
@@ -39,6 +41,7 @@ const showPassword = ref(false);
 // 错误处理
 const error = ref(false);
 const errorMessages = ref("");
+const finishNavigation = () => router.replace(safeRedirectTarget(route.query.redirect));
 
 // 密码登录
 const handlePasswordLogin = async () => {
@@ -52,6 +55,7 @@ const handlePasswordLogin = async () => {
 
     try {
       await authStore.loginWithUsernameAndPassword(phone.value, password.value);
+      await finishNavigation();
     } catch (err) {
       console.error("登录出错", err);
       error.value = true;
@@ -117,6 +121,7 @@ const handleEmailLogin = async () => {
 
     try {
       await authStore.loginWithEmailAndPassword(email.value, emailPassword.value);
+      await finishNavigation();
     } catch (err) {
       console.error("邮箱登录出错", err);
       error.value = true;
@@ -190,15 +195,8 @@ const handleEmailCodeLogin = async () => {
       });
 
       // interceptor 已校验 success，response.data 已是解包后的内层 data
-      authStore.setLoggedIn(true);
-      authStore.setToken(response.data.token);
-
-      // 获取用户信息
-      const profileRes = await apiClient.get("/users/me");
-      const ProfileStore = useProfileStore();
-      ProfileStore.setUser(profileRes.data);
-
-      router.replace("/dashboard");
+      await authStore.completeLogin(response.data);
+      await finishNavigation();
     } catch (err: any) {
       console.error("邮箱验证码登录出错", err);
       error.value = true;
@@ -245,19 +243,20 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <v-card color="white" class="pa-3 ma-3" elevation="3">
-    <v-card-title class="my-4 text-h4">
-      <span class="flex-fill">欢迎登录</span>
-    </v-card-title>
-    <v-card-subtitle>选择登录方式</v-card-subtitle>
+  <div class="auth-form">
+    <header class="mb-6">
+      <h1 class="auth-title">欢迎登录</h1>
+      <p class="house-muted mt-1">选择一种方式登录好客租房</p>
+    </header>
 
     <!-- 错误提示 -->
     <v-alert
       v-if="error"
       type="error"
       variant="tonal"
-      class="mb-4 mx-3"
-      dismissible
+      density="compact"
+      class="mb-4"
+      closable
       @click:close="error = false"
     >
       {{ errorMessages }}
@@ -268,232 +267,268 @@ onUnmounted(() => {
       v-if="!error && errorMessages"
       type="success"
       variant="tonal"
-      class="mb-4 mx-3"
-      dismissible
+      density="compact"
+      class="mb-4"
+      closable
       @click:close="errorMessages = ''"
     >
       {{ errorMessages }}
     </v-alert>
 
-    <v-card-text>
-      <!-- 登录方式选择 -->
-      <v-tabs v-model="loginMethod" class="mb-4" color="primary">
-        <v-tab value="password">
-          <v-icon start>mdi-lock</v-icon>
-          密码登录
-        </v-tab>
-        <v-tab value="email">
-          <v-icon start>mdi-email</v-icon>
-          邮箱登录
-        </v-tab>
-        <v-tab value="email-code">
-          <v-icon start>mdi-email-check</v-icon>
-          邮箱验证码
-        </v-tab>
-      </v-tabs>
+    <!-- 登录方式选择（分段选择器，窄屏下三项均完整可见） -->
+    <v-btn-toggle
+      v-model="loginMethod"
+      mandatory
+      class="login-switch mb-6"
+      variant="text"
+    >
+      <v-btn value="password">
+        <v-icon start class="d-none d-sm-inline-flex">mdi-lock-outline</v-icon>
+        密码登录
+      </v-btn>
+      <v-btn value="email">
+        <v-icon start class="d-none d-sm-inline-flex">mdi-email-outline</v-icon>
+        邮箱登录
+      </v-btn>
+      <v-btn value="email-code">
+        <v-icon start class="d-none d-sm-inline-flex">mdi-email-check-outline</v-icon>
+        邮箱验证码
+      </v-btn>
+    </v-btn-toggle>
 
+    <v-window v-model="loginMethod">
       <!-- 密码登录表单 -->
-      <v-window v-model="loginMethod">
-        <v-window-item value="password">
-          <v-form
-            ref="refPasswordForm"
-            class="text-left"
-            v-model="isFormValid"
-            lazy-validation
-          >
-            <v-text-field
-              v-model="phone"
-              required
-              :error="error"
-              label="手机号"
-              placeholder="请输入手机号"
-              density="default"
-              variant="underlined"
-              color="primary"
-              bg-color="#fff"
-              :rules="phoneRules"
-              name="phone"
-              prepend-inner-icon="mdi-cellphone"
-              @keyup.enter="handlePasswordLogin"
-              @change="resetErrors"
-            ></v-text-field>
+      <v-window-item value="password">
+        <v-form
+          ref="refPasswordForm"
+          class="text-left"
+          v-model="isFormValid"
+          lazy-validation
+        >
+          <v-text-field
+            v-model="phone"
+            required
+            :error="error"
+            label="手机号"
+            placeholder="请输入手机号"
+            color="primary"
+            :rules="phoneRules"
+            name="phone"
+            prepend-inner-icon="mdi-cellphone"
+            class="mb-2"
+            @keyup.enter="handlePasswordLogin"
+            @change="resetErrors"
+          ></v-text-field>
 
+          <v-text-field
+            v-model="password"
+            :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
+            :type="showPassword ? 'text' : 'password'"
+            :error="error"
+            label="密码"
+            placeholder="请输入密码"
+            color="primary"
+            :rules="passwordRules"
+            name="password"
+            prepend-inner-icon="mdi-lock-outline"
+            @change="resetErrors"
+            @keyup.enter="handlePasswordLogin"
+            @click:append-inner="showPassword = !showPassword"
+          ></v-text-field>
+
+          <v-btn
+            :loading="isLoading"
+            :disabled="isSignInDisabled"
+            block
+            size="large"
+            color="primary"
+            variant="flat"
+            @click="handlePasswordLogin"
+            class="mt-2 font-weight-bold"
+          >
+            登录
+          </v-btn>
+        </v-form>
+      </v-window-item>
+
+      <!-- 邮箱登录表单 -->
+      <v-window-item value="email">
+        <v-form
+          ref="refEmailForm"
+          class="text-left"
+          v-model="isFormValid"
+          lazy-validation
+        >
+          <v-text-field
+            v-model="email"
+            required
+            :error="error"
+            label="邮箱"
+            placeholder="请输入邮箱地址"
+            color="primary"
+            :rules="emailRules"
+            name="email"
+            prepend-inner-icon="mdi-email-outline"
+            class="mb-2"
+            @keyup.enter="handleEmailLogin"
+            @change="resetErrors"
+          ></v-text-field>
+
+          <v-text-field
+            v-model="emailPassword"
+            :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
+            :type="showPassword ? 'text' : 'password'"
+            :error="error"
+            label="密码"
+            placeholder="请输入密码"
+            color="primary"
+            :rules="emailPasswordRules"
+            name="emailPassword"
+            prepend-inner-icon="mdi-lock-outline"
+            @change="resetErrors"
+            @keyup.enter="handleEmailLogin"
+            @click:append-inner="showPassword = !showPassword"
+          ></v-text-field>
+
+          <v-btn
+            :loading="isLoading"
+            :disabled="isSignInDisabled"
+            block
+            size="large"
+            color="primary"
+            variant="flat"
+            @click="handleEmailLogin"
+            class="mt-2 font-weight-bold"
+          >
+            登录
+          </v-btn>
+        </v-form>
+      </v-window-item>
+
+      <!-- 邮箱验证码登录表单 -->
+      <v-window-item value="email-code">
+        <v-form
+          ref="refEmailCodeForm"
+          class="text-left"
+          v-model="isFormValid"
+          lazy-validation
+        >
+          <v-text-field
+            v-model="emailForCode"
+            required
+            label="邮箱"
+            placeholder="请输入邮箱地址"
+            color="primary"
+            :rules="emailRules"
+            name="emailForCode"
+            prepend-inner-icon="mdi-email-outline"
+            class="mb-2"
+            @change="resetErrors"
+          ></v-text-field>
+
+          <div class="d-flex align-start ga-2">
             <v-text-field
-              v-model="password"
-              :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
-              :type="showPassword ? 'text' : 'password'"
-              :error="error"
-              label="密码"
-              placeholder="请输入密码"
-              density="default"
-              variant="underlined"
+              v-model="emailCode"
+              required
+              label="验证码"
+              placeholder="请输入6位验证码"
               color="primary"
-              bg-color="#fff"
-              :rules="passwordRules"
-              name="password"
-              prepend-inner-icon="mdi-lock"
+              :rules="emailCodeRules"
+              name="emailCode"
+              prepend-inner-icon="mdi-shield-key-outline"
+              class="flex-grow-1"
+              @keyup.enter="handleEmailCodeLogin"
               @change="resetErrors"
-              @keyup.enter="handlePasswordLogin"
-              @click:append-inner="showPassword = !showPassword"
             ></v-text-field>
 
             <v-btn
-              :loading="isLoading"
-              :disabled="isSignInDisabled"
-              block
-              size="x-large"
+              :loading="isSendingEmailCode"
+              :disabled="emailCountdown > 0 || !emailForCode"
               color="primary"
-              @click="handlePasswordLogin"
-              class="mt-4 font-weight-bold"
+              variant="tonal"
+              height="56"
+              class="code-btn"
+              @click="sendEmailCode"
             >
-              登录
+              {{ emailCountdown > 0 ? `${emailCountdown}s` : '发送验证码' }}
             </v-btn>
-          </v-form>
-        </v-window-item>
+          </div>
 
-        <!-- 邮箱登录表单 -->
-        <v-window-item value="email">
-          <v-form
-            ref="refEmailForm"
-            class="text-left"
-            v-model="isFormValid"
-            lazy-validation
+          <v-btn
+            :loading="isEmailCodeLoading"
+            :disabled="!emailCode || emailCode.length !== 6"
+            block
+            size="large"
+            color="primary"
+            variant="flat"
+            @click="handleEmailCodeLogin"
+            class="mt-2 font-weight-bold"
           >
-            <v-text-field
-              v-model="email"
-              required
-              :error="error"
-              label="邮箱"
-              placeholder="请输入邮箱地址"
-              density="default"
-              variant="underlined"
-              color="primary"
-              bg-color="#fff"
-              :rules="emailRules"
-              name="email"
-              prepend-inner-icon="mdi-email"
-              @keyup.enter="handleEmailLogin"
-              @change="resetErrors"
-            ></v-text-field>
+            登录
+          </v-btn>
+        </v-form>
+      </v-window-item>
+    </v-window>
 
-            <v-text-field
-              v-model="emailPassword"
-              :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
-              :type="showPassword ? 'text' : 'password'"
-              :error="error"
-              label="密码"
-              placeholder="请输入密码"
-              density="default"
-              variant="underlined"
-              color="primary"
-              bg-color="#fff"
-              :rules="emailPasswordRules"
-              name="emailPassword"
-              prepend-inner-icon="mdi-lock"
-              @change="resetErrors"
-              @keyup.enter="handleEmailLogin"
-              @click:append-inner="showPassword = !showPassword"
-            ></v-text-field>
-
-            <v-btn
-              :loading="isLoading"
-              :disabled="isSignInDisabled"
-              block
-              size="x-large"
-              color="primary"
-              @click="handleEmailLogin"
-              class="mt-4 font-weight-bold"
-            >
-              登录
-            </v-btn>
-                     </v-form>
-         </v-window-item>
-
-         <!-- 邮箱验证码登录表单 -->
-         <v-window-item value="email-code">
-           <v-form
-             ref="refEmailCodeForm"
-             class="text-left"
-             v-model="isFormValid"
-             lazy-validation
-           >
-             <v-text-field
-               v-model="emailForCode"
-               required
-               label="邮箱"
-               placeholder="请输入邮箱地址"
-               density="default"
-               variant="underlined"
-               color="primary"
-               bg-color="#fff"
-               :rules="emailRules"
-               name="emailForCode"
-               prepend-inner-icon="mdi-email"
-               @change="resetErrors"
-             ></v-text-field>
-
-             <div class="d-flex align-center">
-               <v-text-field
-                 v-model="emailCode"
-                 required
-                 label="验证码"
-                 placeholder="请输入6位验证码"
-                 density="default"
-                 variant="underlined"
-                 color="primary"
-                 bg-color="#fff"
-                 :rules="emailCodeRules"
-                 name="emailCode"
-                 prepend-inner-icon="mdi-email-check"
-                 class="flex-grow-1 mr-2"
-                 @keyup.enter="handleEmailCodeLogin"
-                 @change="resetErrors"
-               ></v-text-field>
-
-               <v-btn
-                 :loading="isSendingEmailCode"
-                 :disabled="emailCountdown > 0 || !emailForCode"
-                 color="primary"
-                 variant="outlined"
-                 @click="sendEmailCode"
-                 class="mb-6"
-               >
-                 {{ emailCountdown > 0 ? `${emailCountdown}s` : '发送验证码' }}
-               </v-btn>
-             </div>
-
-             <v-btn
-               :loading="isEmailCodeLoading"
-               :disabled="!emailCode || emailCode.length !== 6"
-               block
-               size="x-large"
-               color="primary"
-               @click="handleEmailCodeLogin"
-               class="mt-4 font-weight-bold"
-             >
-               登录
-             </v-btn>
-           </v-form>
-         </v-window-item>
-       </v-window>
-
-      <div class="mt-5 text-center">
-        <router-link class="text-primary" to="/setpassword" @click="resetPassword">
-          忘记密码？
+    <div class="d-flex flex-wrap justify-space-between align-center ga-2 mt-6 text-body-2">
+      <span class="house-muted">
+        还没有账号？
+        <router-link to="/auth/signup" class="text-primary font-weight-bold">
+          立即注册
         </router-link>
-      </div>
-    </v-card-text>
-  </v-card>
-
-  <div class="text-center mt-6">
-    还没有账号？
-    <router-link to="/auth/signup" class="text-primary font-weight-bold">
-      立即注册
-    </router-link>
+      </span>
+      <router-link class="text-primary" to="/setpassword" @click="resetPassword">
+        忘记密码？
+      </router-link>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.auth-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--house-ink);
+}
+
+.login-switch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  height: auto !important;
+  padding: 4px;
+  gap: 4px;
+  border-radius: var(--house-radius);
+  background: var(--house-soft);
+}
+
+.login-switch :deep(.v-btn) {
+  min-width: 0;
+  height: 40px !important;
+  padding: 0 6px;
+  border-radius: 8px !important;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--house-muted);
+  background: transparent;
+}
+
+.login-switch :deep(.v-btn.v-btn--active) {
+  background: rgb(var(--v-theme-surface)) !important;
+  color: rgb(var(--v-theme-primary)) !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.login-switch :deep(.v-btn.v-btn--active > .v-btn__overlay) {
+  opacity: 0 !important;
+}
+
+.code-btn {
+  flex-shrink: 0;
+  min-width: 104px;
+}
+
 .shake {
   animation: shake 0.5s;
 }

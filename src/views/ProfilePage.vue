@@ -95,7 +95,7 @@ const navigateToRent = () => {
 };
 const navigateToRent1 = () => {
   router.push({
-    path: '/myHouse'
+    path: '/my-listings'
   });
 };
 // 身份证隐秘
@@ -376,101 +376,93 @@ const triggerFileInput = () => {
 </script>
 
 <template>
-  <v-container>
+  <div class="profile-page">
     <AvatarCropper v-model:dialog="isCropperOpen" @upload="onAvatarUpload" />
-  </v-container>
-  <v-sheet elevation="0" class="mx-auto" color="transparent" max-width="1600">
 
-    <!-- 添加Snackbar通知 -->
-    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
-      {{ snackbar.message }}
+    <!-- 页面内操作提示（与全局提示条保持相同位置与样式） -->
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000" location="top">
+      <div class="d-flex align-center">
+        <v-icon class="mr-2">{{ snackbar.color === 'error' ? 'mdi-alert-circle' : 'mdi-check-circle' }}</v-icon>
+        <span>{{ snackbar.message }}</span>
+      </div>
     </v-snackbar>
 
     <v-row>
+      <v-col cols="12" md="4" lg="3">
+        <v-card class="profile-side">
+          <div class="d-flex flex-column align-center pa-8">
+            <!-- 头像显示（点击头像打开裁剪上传） -->
+            <div class="avatar-wrap" title="点击更换头像" @click="isCropperOpen = true">
+              <v-avatar size="112" class="avatar-ring">
+                <v-img
+                  :src="user.avatarUrl || DEFAULT_AVATAR"
+                  :key="avatarRefreshKey"
+                  cover
+                ></v-img>
+              </v-avatar>
+              <span class="avatar-badge">
+                <v-icon size="16">mdi-camera-outline</v-icon>
+              </span>
+            </div>
 
-    <v-col cols="12" md="3">
-  <v-card>
-    <div class="d-flex flex-column pa-10">
-        <!-- 头像显示（使用数据库中的URL） -->
-        <!-- 头像显示（优化默认值判断逻辑） -->
-      <v-avatar size="120" class="mx-auto elevation-12" color="white">
-        <v-img 
-          :src="user.avatarUrl || DEFAULT_AVATAR" 
-          :key="avatarRefreshKey" 
-          @click="isCropperOpen = true" style="cursor: pointer;"
-        ></v-img>
-      </v-avatar>
-      
-      
-      
-      <!-- 隐藏的文件输入 -->
-      <input
-        ref="avatarInput"
-        type="file"
-        accept="image/*"
-        style="display: none"
-        @change="handleAvatarUpload"
-      />
+            <!-- 隐藏的文件输入 -->
+            <input
+              ref="avatarInput"
+              type="file"
+              accept="image/*"
+              style="display: none"
+              @change="handleAvatarUpload"
+            />
 
-      <div class="text-center mt-5">
-        <h3 class="text-h6 font-weight-bold">
-          {{user.name}}
-                <v-chip
-          size="small"
-          class="font-weight-bold"
-          :color="chipInfo.color"
-        >
-          {{ chipInfo.name }}
-        </v-chip>
-        </h3>
-        
-      </div>
-      <!-- 上传按钮（始终显示） -->
-      <v-btn
-        class="mt-3"
-        color="primary"
-        :loading="isUploading"
-        @click="avatarInput?.click()"
-        disabled
-      >
-        更换头像(请点击头像)
-      </v-btn>
-    </div>
+            <div class="d-flex align-center ga-2 mt-5">
+              <h2 class="text-h6 font-weight-bold">{{ user.name }}</h2>
+              <v-chip size="small" variant="tonal" :color="chipInfo.color" class="font-weight-bold">
+                {{ chipInfo.name }}
+              </v-chip>
+            </div>
 
-    <v-divider></v-divider>
-    <div class="py-5 px-10">
-      <v-icon color="grey"> mdi-map-marker </v-icon>
-      <span class="ml-4">长沙</span>
-    </div>
+            <v-btn
+              class="mt-4"
+              color="primary"
+              variant="tonal"
+              :loading="isUploading"
+              @click="avatarInput?.click()"
+              disabled
+            >
+              更换头像(请点击头像)
+            </v-btn>
+          </div>
 
-    <v-divider></v-divider>
-    <div class="py-5 px-10">
-      <v-icon color="grey"> mdi-email-check-outline </v-icon>
-      <span class="ml-4">{{user.email }}</span>
-    </div>
-    
-    <v-divider></v-divider>
-    <div class="py-5 px-10">
-      <v-icon color="grey"> mdi-phone-outline </v-icon>
-      <span class="ml-4">{{user.phone}}</span>
-    </div>
-  </v-card>
-</v-col>
+          <v-divider></v-divider>
+          <div class="info-row">
+            <v-icon size="20" class="text-medium-emphasis">mdi-map-marker-outline</v-icon>
+            <span>长沙</span>
+          </div>
+          <v-divider></v-divider>
+          <div class="info-row">
+            <v-icon size="20" class="text-medium-emphasis">mdi-email-check-outline</v-icon>
+            <span class="text-truncate">{{ user.email }}</span>
+          </div>
+          <v-divider></v-divider>
+          <div class="info-row">
+            <v-icon size="20" class="text-medium-emphasis">mdi-phone-outline</v-icon>
+            <span>{{ user.phone }}</span>
+          </div>
+        </v-card>
+      </v-col>
 
-
-      <v-col cols="12" md="9">
-        <!-- ---------------------------------------------- -->
-        <!--   Basic Infomation -->
-        <!-- ---------------------------------------------- -->
+      <v-col cols="12" md="8" lg="9">
+        <!-- 基本信息 -->
         <v-card class="mb-5">
-          <v-card-title class="py-4 font-weight-bold">
+          <v-card-title class="section-head">
+            <v-icon size="20" color="primary">mdi-account-outline</v-icon>
             基本信息
           </v-card-title>
           <v-divider></v-divider>
-          <v-card-text class="pa-7">
+          <v-card-text class="pa-6">
             <v-row>
-              <v-col cols="12" sm="5">
-                <v-label class="font-weight-medium mb-2">用户名</v-label>
+              <v-col cols="12" sm="6">
+                <v-label class="field-label">用户名</v-label>
                 <v-text-field
                   v-model="user.name"
                   color="primary"
@@ -481,8 +473,8 @@ const triggerFileInput = () => {
                   hide-details
                 />
               </v-col>
-              <v-col cols="12" sm="5">
-                <v-label class="font-weight-medium mb-2">地址</v-label>
+              <v-col cols="12" sm="6">
+                <v-label class="field-label">地址</v-label>
                 <v-text-field
                   v-model="user.addr"
                   color="primary"
@@ -493,14 +485,11 @@ const triggerFileInput = () => {
                   hide-details
                 />
               </v-col>
-            </v-row>
-            <v-row>
-              <v-col cols="12" sm="5">
-                <v-label class="font-weight-medium mb-2">邮箱</v-label>
+              <v-col cols="12" sm="6">
+                <v-label class="field-label">邮箱</v-label>
                 <v-text-field
-                  class="bg-blue-grey-lighten-5"
                   v-model="user.email"
-                  color="White"
+                  color="primary"
                   variant="outlined"
                   density="compact"
                   type="text"
@@ -508,12 +497,11 @@ const triggerFileInput = () => {
                   hide-details
                 />
               </v-col>
-              <v-col cols="12" sm="5">
-                <v-label class="font-weight-medium mb-2">电话</v-label>
+              <v-col cols="12" sm="6">
+                <v-label class="field-label">电话</v-label>
                 <v-text-field
-                  class="bg-blue-grey-lighten-5"
                   v-model="user.phone"
-                  color="White"
+                  color="primary"
                   variant="outlined"
                   density="compact"
                   type="text"
@@ -521,55 +509,49 @@ const triggerFileInput = () => {
                   hide-details
                 />
               </v-col>
-            </v-row>
-            <v-row>
-              <v-col cols="12" sm="5">
-                <v-label class="font-weight-medium mb-2">身份证号</v-label>
-                  <v-text-field
-                    v-model="formattedIdCard"
-                    @focus="onIdCardFocus"
-                    @blur="onIdCardBlur"
-                    color="primary"
-                    variant="outlined"
-                    density="compact"
-                    type="text"
-                    placeholder="请输入18位身份证号"
-                    :maxlength="18"
-                    @input="e => formattedIdCard = e.replace(/[^\d]/g, '')"
-                  />
+              <v-col cols="12" sm="6">
+                <v-label class="field-label">身份证号</v-label>
+                <v-text-field
+                  v-model="formattedIdCard"
+                  @focus="onIdCardFocus"
+                  @blur="onIdCardBlur"
+                  color="primary"
+                  variant="outlined"
+                  density="compact"
+                  type="text"
+                  placeholder="请输入18位身份证号"
+                  :maxlength="18"
+                  @input="e => formattedIdCard = e.replace(/[^\d]/g, '')"
+                />
               </v-col>
             </v-row>
           </v-card-text>
           <v-divider></v-divider>
-          <v-card-actions class="pa-5">
+          <v-card-actions class="px-6 py-4 flex-wrap ga-2">
             <v-spacer></v-spacer>
-           
-              <v-btn
-                class="px-5 mr-2  "
-                color="primary"
-                elevation="1"
-                variant="elevated"
-                @click="navigateToRent1"
-                v-if="userType === 2"
-              >
-                我的房源
-              </v-btn>
-            
-            
             <v-btn
-              class="px-5"
+              class="px-4"
               color="primary"
-              elevation="1"
-              variant="elevated"
+              variant="tonal"
+              prepend-icon="mdi-home-city-outline"
+              @click="navigateToRent1"
+              v-if="userType === 2"
+            >
+              我的房源
+            </v-btn>
+            <v-btn
+              class="px-4"
+              color="primary"
+              variant="tonal"
+              prepend-icon="mdi-format-list-bulleted"
               @click="navigateToRent"
             >
               租房列表
             </v-btn>
             <v-btn
-              class="px-5"
+              class="px-4"
               color="primary"
-              elevation="1"
-              variant="elevated"
+              variant="flat"
               @click="updateUserInfo"
             >
               基本信息修改
@@ -577,76 +559,59 @@ const triggerFileInput = () => {
           </v-card-actions>
         </v-card>
 
-        <!-- ---------------------------------------------- -->
-        <!--   Authentication  -->
-        <!-- ---------------------------------------------- -->
+        <!-- 第三方账号（功能暂未开放，仅展示） -->
         <v-card class="mb-5">
-          <v-card-title class="py-4 font-weight-bold">
-            Authentication
+          <v-card-title class="section-head">
+            <v-icon size="20" color="primary">mdi-link-variant</v-icon>
+            第三方账号
+            <v-chip size="small" variant="tonal" color="info" class="ml-2">暂未开放</v-chip>
           </v-card-title>
           <v-divider></v-divider>
-          <v-card-text class="pa-7">
-            <v-row>
-              <v-col cols="12" md="6">
-                <v-btn
-                  size="large"
-                  block
-                  variant="outlined"
-                  disabled
-                >
-                  <Icon
-                    icon="logos:microsoft-icon"
-                    class="mr-3 my-2"
-                  />Microsoft
+          <v-card-text class="pa-6">
+            <p class="house-muted text-body-2 mb-4">第三方账号绑定功能即将上线，敬请期待。</p>
+            <v-row dense>
+              <v-col cols="12" sm="6">
+                <v-btn block variant="outlined" class="oauth-btn" disabled>
+                  <Icon icon="logos:microsoft-icon" class="mr-3" />Microsoft
                 </v-btn>
               </v-col>
-              <v-col cols="12" md="6">
-                <v-btn size="large" block variant="outlined" disabled>
-                  <Icon
-                    icon="logos:facebook"
-                    class="mr-3 my-2"
-                  />Facebook
+              <v-col cols="12" sm="6">
+                <v-btn block variant="outlined" class="oauth-btn" disabled>
+                  <Icon icon="logos:facebook" class="mr-3" />Facebook
                 </v-btn>
               </v-col>
-              <v-col cols="12" md="6">
-                <v-btn size="large" block variant="elevated"
-                  color="primary"
-                >
-                  <Icon
-                    icon="logos:github-icon"
-                    class="mr-3 my-2"
-                  />Github
+              <v-col cols="12" sm="6">
+                <v-btn block variant="outlined" class="oauth-btn">
+                  <Icon icon="mdi:github" class="mr-3" />Github
                 </v-btn>
               </v-col>
-              <v-col cols="12" md="6">
-                <v-btn size="large" block variant="outlined" disabled>
-                  <Icon icon="logos:twitter" class="mr-3 my-2" />Twitter
+              <v-col cols="12" sm="6">
+                <v-btn block variant="outlined" class="oauth-btn" disabled>
+                  <Icon icon="logos:twitter" class="mr-3" />Twitter
                 </v-btn>
               </v-col>
             </v-row>
           </v-card-text>
         </v-card>
 
-        <!-- ---------------------------------------------- -->
-        <!--   Change Password  -->
-        <!-- ---------------------------------------------- -->
+        <!-- 修改密码 -->
         <v-card class="mb-5">
-          <v-card-title class="py-4 font-weight-bold">
+          <v-card-title class="section-head">
+            <v-icon size="20" color="primary">mdi-lock-outline</v-icon>
             修改密码
           </v-card-title>
           <v-divider></v-divider>
-          <v-card-text class="pa-7">
+          <v-card-text class="pa-6">
             <v-row>
               <v-col cols="12" sm="6">
-                <v-label class="font-weight-medium mb-2">当前密码</v-label>
+                <v-label class="field-label">当前密码</v-label>
                 <v-text-field
                   v-model="signon.password"
-                  class="bg-blue-grey-lighten-5"
                   density="compact"
                   color="primary"
                   variant="outlined"
                   :type="currentPasswordShow ? 'text' : 'password'"
-                  placeholder="Current Password"
+                  placeholder="请输入当前密码"
                   hide-details
                   :append-inner-icon="
                     currentPasswordShow ? 'mdi-eye' : 'mdi-eye-off'
@@ -656,16 +621,16 @@ const triggerFileInput = () => {
                   "
                 />
               </v-col>
-              <v-col cols="12" sm="6"> </v-col>
+              <v-col cols="12" sm="6" class="d-none d-sm-block"> </v-col>
               <v-col cols="12" sm="6">
-                <v-label class="font-weight-medium mb-2">新密码</v-label>
+                <v-label class="field-label">新密码</v-label>
                 <v-text-field
                   v-model="newpassword"
                   density="compact"
                   color="primary"
                   variant="outlined"
                   :type="newPasswordShow ? 'text' : 'password'"
-                  placeholder="new password"
+                  placeholder="请输入新密码"
                   hide-details
                   :append-inner-icon="
                     newPasswordShow ? 'mdi-eye' : 'mdi-eye-off'
@@ -675,14 +640,14 @@ const triggerFileInput = () => {
                 />
               </v-col>
               <v-col cols="12" sm="6">
-                <v-label class="font-weight-medium mb-2">再次输入密码</v-label>
+                <v-label class="field-label">再次输入密码</v-label>
                 <v-text-field
                   v-model="confirmPassword"
                   density="compact"
                   color="primary"
                   variant="outlined"
                   :type="confirmPasswordShow ? 'text' : 'password'"
-                  placeholder="confirm password"
+                  placeholder="请再次输入新密码"
                   hide-details
                   :append-inner-icon="
                     confirmPasswordShow ? 'mdi-eye' : 'mdi-eye-off'
@@ -695,6 +660,7 @@ const triggerFileInput = () => {
                 <v-alert
                   v-if="showPasswordMismatch"
                   type="error"
+                  variant="tonal"
                   density="compact"
                   class="mt-2"
                 >
@@ -704,105 +670,171 @@ const triggerFileInput = () => {
             </v-row>
           </v-card-text>
           <v-divider></v-divider>
-          <v-card-actions class="pa-5">
+          <v-card-actions class="px-6 py-4">
             <v-spacer></v-spacer>
             <v-btn
-              class="px-5"
+              class="px-4"
               color="primary"
-              elevation="1"
-              variant="elevated"
+              variant="flat"
               @click="updatePassword"
               :disabled="showPasswordMismatch"
             >
               修改密码
             </v-btn>
-            
           </v-card-actions>
         </v-card>
 
-        <!-- ---------------------------------------------- -->
-        <!--   Notifications  -->
-        <!-- ---------------------------------------------- -->
-        
+        <!-- 申请成为房东 -->
         <v-card class="mb-5" v-if="userType === 1">
-  <v-card-title class="py-4 font-weight-bold">
-    申请成为房东
-  </v-card-title>
-  <v-divider></v-divider>
-  <v-card-text class="pa-7">
-    <v-row>
-      <v-col cols="12" sm="8">
-        <v-label class="font-weight-medium mb-2">邮箱地址</v-label>
-        <v-text-field
-          v-model="user.email"
-          color="primary"
-          variant="outlined"
-          density="compact"
-          type="email"
-          placeholder="请输入您的邮箱"
-          hide-details
-          readonly
-        />
-      </v-col>
-      <v-col cols="12" sm="4" class="d-flex align-end">
-        <v-btn
-          color="primary"
-          variant="elevated"
-          :disabled="isSendingCode"
-          @click="sendEmailVerificationCode"
-        >
-          {{ isSendingCode ? `${countdown}秒后重试` : '获取验证码' }}
-        </v-btn>
-      </v-col>
-    </v-row>
-    <v-row class="mt-3">
-      <v-col cols="12" sm="8">
-        <v-label class="font-weight-medium mb-2">邮箱验证码</v-label>
-        <v-text-field
-          v-model="emailVerificationCode"
-          color="primary"
-          variant="outlined"
-          density="compact"
-          type="text"
-          placeholder="请输入邮箱验证码"
-          hide-details
-        />
-      </v-col>
-    </v-row>
-    <v-row class="mt-3">
-      <v-col cols="12">
-        <v-alert
-          v-if="verificationError"
-          type="error"
-          density="compact"
-          class="mt-2"
-        >
-          {{ verificationError }}
-        </v-alert>
-      </v-col>
-    </v-row>
-  </v-card-text>
-  <v-divider></v-divider>
-  <v-card-actions class="pa-5">
-    <v-spacer></v-spacer>
-    <v-btn
-      class="px-5"
-      color="primary"
-      elevation="1"
-      variant="elevated"
-      @click="submitLandlordApplication"
-      :disabled="!emailVerificationCode || isSubmitting"
-    >
-      {{ isSubmitting ? '提交中...' : '提交申请' }}
-    </v-btn>
-  </v-card-actions>
-</v-card>
-
-
-
+          <v-card-title class="section-head">
+            <v-icon size="20" color="primary">mdi-key-chain-variant</v-icon>
+            申请成为房东
+          </v-card-title>
+          <v-divider></v-divider>
+          <v-card-text class="pa-6">
+            <p class="house-muted text-body-2 mb-4">
+              通过邮箱验证后即可发布与管理房源。
+            </p>
+            <v-row>
+              <v-col cols="12" sm="8">
+                <v-label class="field-label">邮箱地址</v-label>
+                <v-text-field
+                  v-model="user.email"
+                  color="primary"
+                  variant="outlined"
+                  density="compact"
+                  type="email"
+                  placeholder="请输入您的邮箱"
+                  hide-details
+                  readonly
+                />
+              </v-col>
+              <v-col cols="12" sm="4" class="d-flex align-end">
+                <v-btn
+                  color="primary"
+                  variant="tonal"
+                  height="40"
+                  block
+                  :disabled="isSendingCode"
+                  @click="sendEmailVerificationCode"
+                >
+                  {{ isSendingCode ? `${countdown}秒后重试` : '获取验证码' }}
+                </v-btn>
+              </v-col>
+              <v-col cols="12" sm="8">
+                <v-label class="field-label">邮箱验证码</v-label>
+                <v-text-field
+                  v-model="emailVerificationCode"
+                  color="primary"
+                  variant="outlined"
+                  density="compact"
+                  type="text"
+                  placeholder="请输入邮箱验证码"
+                  hide-details
+                />
+              </v-col>
+              <v-col cols="12" v-if="verificationError">
+                <v-alert
+                  type="error"
+                  variant="tonal"
+                  density="compact"
+                >
+                  {{ verificationError }}
+                </v-alert>
+              </v-col>
+            </v-row>
+          </v-card-text>
+          <v-divider></v-divider>
+          <v-card-actions class="px-6 py-4">
+            <v-spacer></v-spacer>
+            <v-btn
+              class="px-4"
+              color="primary"
+              variant="flat"
+              @click="submitLandlordApplication"
+              :disabled="!emailVerificationCode || isSubmitting"
+            >
+              {{ isSubmitting ? '提交中...' : '提交申请' }}
+            </v-btn>
+          </v-card-actions>
+        </v-card>
       </v-col>
     </v-row>
-  </v-sheet>
+  </div>
 </template>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.profile-side {
+  position: sticky;
+  top: 88px;
+}
+
+.avatar-wrap {
+  position: relative;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.avatar-ring {
+  border: 3px solid rgb(var(--v-theme-surface));
+  box-shadow: 0 0 0 2px var(--house-line), var(--house-shadow);
+}
+
+.avatar-badge {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: rgb(var(--v-theme-on-primary));
+  background: rgb(var(--v-theme-primary));
+  border: 2px solid rgb(var(--v-theme-surface));
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 24px;
+  color: var(--house-ink);
+  min-width: 0;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--house-ink);
+  opacity: 1;
+}
+
+.oauth-btn {
+  height: 44px !important;
+  color: var(--house-ink);
+  border-color: var(--house-line);
+}
+
+@media (max-width: 959px) {
+  .profile-side {
+    position: static;
+  }
+}
+</style>

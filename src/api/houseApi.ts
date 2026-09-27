@@ -48,6 +48,11 @@ export interface HouseInfo {
   house_num?: string;
   page_views?: string;
   phone_num?: string;
+  landlord_id?: number | null;
+  ownership_status: 'pending' | 'verified' | 'rejected';
+  can_appoint: boolean;
+  can_sign: boolean;
+  unavailable_reason?: string | null;
 }
 
 export interface PaginatedHouseResponse {
@@ -73,12 +78,22 @@ export const fetchHouses = async (filters: HouseFilters): Promise<PaginatedHouse
   });
 
   // 响应拦截器已自动解包 {code,data,message,success}，response.data 即为 PaginatedHouseResponse
-  return response.data as PaginatedHouseResponse;
+  const result = response.data as PaginatedHouseResponse;
+  result.items = result.items.map(normalizeHouseInfo);
+  return result;
 };
+
+const normalizeHouseInfo = (house: HouseInfo): HouseInfo => ({
+  ...house,
+  ownership_status: house.ownership_status || "pending",
+  can_appoint: house.can_appoint === true,
+  can_sign: house.can_sign === true,
+  unavailable_reason: house.unavailable_reason ?? null,
+});
 
 export const fetchHouseById = async (id: number): Promise<HouseInfo> => {
   const response = await apiClient.get(`${API_BASE_URL}/${id}`);
 
   // 响应拦截器已自动解包，response.data 即为 HouseInfo
-  return response.data as HouseInfo;
+  return normalizeHouseInfo(response.data as HouseInfo);
 };

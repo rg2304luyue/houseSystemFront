@@ -1,3 +1,4 @@
+// 【未使用】无任何引用，可在确认后删除。
 const isObject = (val: any): boolean => val && typeof val === "object";
 const mergeArrayWithDedupe = (a: string[], b: string[]): string[] =>
   Array.from(new Set([...a, ...b]));

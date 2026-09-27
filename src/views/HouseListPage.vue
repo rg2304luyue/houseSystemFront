@@ -1,340 +1,322 @@
 <template>
-<div class="pa-5">
-  <v-container fluid class="pa-0">
-    <v-card class="mb-5 pa-4" flat outlined>
-      <v-card-title class="text-h5 font-weight-bold pl-0">
-        智能搜索
-      </v-card-title>
-      <v-row align="center" dense>
-        <v-col cols="12">
-          <v-text-field
-            v-model="searchFilters.community"
-            label="请输入区域、商圈或小区名开始找房"
-            variant="outlined"
-            density="compact"
-            prepend-inner-icon="mdi-magnify"
-            clearable
-            hide-details
-            @keyup.enter="applyFiltersAndResetPage"
-          ></v-text-field>
-        </v-col>
-      </v-row>
+<div class="house-list-page">
+  <v-card class="filter-panel mb-6" flat>
+    <div class="filter-head">
+      <h1 class="house-section-title">找房</h1>
+      <span class="house-muted text-body-2">按区域、租金、户型快速筛选长沙好房</span>
+    </div>
+    <v-text-field
+      v-model="searchFilters.community"
+      placeholder="请输入区域、商圈或小区名开始找房"
+      variant="outlined"
+      density="comfortable"
+      prepend-inner-icon="mdi-magnify"
+      clearable
+      hide-details
+      class="filter-search"
+      @keyup.enter="applyFiltersAndResetPage"
+    ></v-text-field>
 
-      <v-row dense align="center" class="mt-3">
-        <v-col cols="auto" class="filter-label">按区域:</v-col>
-        <v-col>
-          <v-chip-group
-            v-model="searchFilters.region"
-            column
-            multiple
-            selected-class="text-primary"
+    <div class="filter-rows">
+      <div class="filter-row">
+        <div class="filter-label">区域</div>
+        <v-chip-group
+          v-model="searchFilters.region"
+          column
+          multiple
+          color="primary"
+          class="filter-options"
+        >
+          <v-chip
+            v-for="region in availableRegions"
+            :key="region.value"
+            :value="region.value"
+            label
+            size="small"
+            variant="tonal"
+            class="filter-chip"
           >
-            <v-chip
-              v-for="region in availableRegions"
-              :key="region.value"
-              :value="region.value"
-              label
-              size="small"
-              filter
-            >
-              {{ region.text }}
-            </v-chip>
-          </v-chip-group>
-        </v-col>
-      </v-row>
+            {{ region.text }}
+          </v-chip>
+        </v-chip-group>
+      </div>
 
-      <v-row dense align="center" class="mt-2">
-        <v-col cols="auto" class="filter-label">方式:</v-col>
-        <v-col>
-          <v-chip-group
-            v-model="searchFilters.rent_type"
-            mandatory
-            selected-class="text-primary"
-          >
-            <v-chip value="" label size="small" filter>不限</v-chip>
-            <v-chip value="整租" label size="small" filter>整租</v-chip>
-            <v-chip value="合租" label size="small" filter>合租</v-chip>
-          </v-chip-group>
-        </v-col>
-      </v-row>
+      <div class="filter-row">
+        <div class="filter-label">方式</div>
+        <v-chip-group
+          v-model="searchFilters.rent_type"
+          mandatory
+          column
+          color="primary"
+          class="filter-options"
+        >
+          <v-chip value="" label size="small" variant="tonal" class="filter-chip">不限</v-chip>
+          <v-chip value="整租" label size="small" variant="tonal" class="filter-chip">整租</v-chip>
+          <v-chip value="合租" label size="small" variant="tonal" class="filter-chip">合租</v-chip>
+        </v-chip-group>
+      </div>
 
-      <v-row dense align="center" class="mt-2">
-        <v-col cols="auto" class="filter-label">租金:</v-col>
-        <v-col>
+      <div class="filter-row">
+        <div class="filter-label">租金</div>
+        <div class="filter-options filter-options--price">
           <v-chip-group
             v-model="selectedRentRange"
-            selected-class="text-primary"
+            column
+            color="primary"
             @update:model-value="onRentRangeChange"
           >
-            <v-chip value="all" label size="small" filter>不限</v-chip>
-            <v-chip v-for="range in rentRanges" :key="range.label" :value="range.label" label size="small" filter>
+            <v-chip value="all" label size="small" variant="tonal" class="filter-chip">不限</v-chip>
+            <v-chip v-for="range in rentRanges" :key="range.label" :value="range.label" label size="small" variant="tonal" class="filter-chip">
               {{ range.label }}
             </v-chip>
           </v-chip-group>
-        </v-col>
-        <v-col cols="12" md="auto" class="d-flex align-center mt-2 mt-md-0 flex-wrap"> <v-text-field
-            v-model.number="customMinPrice"
-            label="最低价"
-            variant="outlined"
-            density="compact"
-            type="number"
-            hide-details
-            class="mr-2"
-            style="max-width: 100px;"
-          ></v-text-field>
-          <span class="mx-1 body-1">-</span>
-          <v-text-field
-            v-model.number="customMaxPrice"
-            label="最高价"
-            variant="outlined"
-            density="compact"
-            type="number"
-            hide-details
-            class="mr-2"
-            style="max-width: 100px;"
-          ></v-text-field>
-          <v-btn  color="primary" variant="outlined" @click="applyCustomPriceRange" class="mt-2 mt-md-0">确定</v-btn>
-        </v-col>
-      </v-row>
-
-      <v-row dense align="center" class="mt-2">
-        <v-col cols="auto" class="filter-label">户型:</v-col>
-        <v-col>
-          <v-chip-group
-            v-model="searchFilters.rooms"
-            column
-            multiple
-            selected-class="text-primary"
-          >
-            <v-chip value="一居" label size="small" filter>一居</v-chip>
-            <v-chip value="两居" label size="small" filter>两居</v-chip>
-            <v-chip value="三居" label size="small" filter>三居</v-chip>
-            <v-chip value="四居" label size="small" filter>四居</v-chip>
-            <v-chip value="四居+" label size="small" filter>四居+</v-chip>
-          </v-chip-group>
-        </v-col>
-      </v-row>
-      
-      <v-row dense align="center" class="mt-2">
-        <v-col cols="auto" class="filter-label">朝向:</v-col>
-        <v-col>
-          <v-chip-group
-            v-model="searchFilters.orientation"
-            column
-            multiple
-            selected-class="text-primary"
-          >
-            <v-chip v-for="o in orientations" :key="o" :value="o" label size="small" filter>{{ o }}</v-chip>
-          </v-chip-group>
-        </v-col>
-      </v-row>
-
-      <v-row dense class="mt-4">
-        <v-col>
-          <v-btn color="primary" @click="applyFiltersAndResetPage" :loading="loading">
-            <v-icon start>mdi-filter-variant</v-icon>
-            应用筛选
-          </v-btn>
-          <v-btn class="ml-2" @click="resetFilters" :disabled="loading">
-            <v-icon start>mdi-refresh</v-icon>
-            重置
-          </v-btn>
-        </v-col>
-      </v-row>
-    </v-card>
-
-    <div class="list-container pa-0 pt-5">
-      <v-progress-linear
-        v-if="loading && hasLoaded"
-        indeterminate
-        color="primary"
-        class="results-progress"
-      ></v-progress-linear>
-
-      <div v-if="loading && !hasLoaded" class="text-center my-10">
-        <v-progress-circular indeterminate color="primary" size="50"></v-progress-circular>
-        <p class="mt-3 text-grey-darken-1">正在加载房源数据...</p>
+          <div class="price-custom">
+            <v-text-field
+              v-model.number="customMinPrice"
+              placeholder="最低价"
+              variant="outlined"
+              density="compact"
+              type="number"
+              hide-details
+              class="price-input"
+            ></v-text-field>
+            <span class="house-muted">—</span>
+            <v-text-field
+              v-model.number="customMaxPrice"
+              placeholder="最高价"
+              variant="outlined"
+              density="compact"
+              type="number"
+              hide-details
+              class="price-input"
+            ></v-text-field>
+            <v-btn color="primary" variant="outlined" size="small" @click="applyCustomPriceRange">确定</v-btn>
+          </div>
+        </div>
       </div>
 
-      <v-row v-else-if="houses.length > 0" dense>
-        <v-col cols="12" md="8">
-          <v-card 
-            v-for="house in houses" 
-            :key="house.id" 
-            class="mb-4 house-card"
-            hover
-            @click="goToHouseDetail(house.id)"
-          >
-            <v-row no-gutters>
-              <v-col cols="12" sm="4" class="d-flex align-center pa-sm-3 pa-2">
+      <div class="filter-row">
+        <div class="filter-label">户型</div>
+        <v-chip-group
+          v-model="searchFilters.rooms"
+          column
+          multiple
+          color="primary"
+          class="filter-options"
+        >
+          <v-chip value="一居" label size="small" variant="tonal" class="filter-chip">一居</v-chip>
+          <v-chip value="两居" label size="small" variant="tonal" class="filter-chip">两居</v-chip>
+          <v-chip value="三居" label size="small" variant="tonal" class="filter-chip">三居</v-chip>
+          <v-chip value="四居" label size="small" variant="tonal" class="filter-chip">四居</v-chip>
+          <v-chip value="四居+" label size="small" variant="tonal" class="filter-chip">四居+</v-chip>
+        </v-chip-group>
+      </div>
+
+      <div class="filter-row">
+        <div class="filter-label">朝向</div>
+        <v-chip-group
+          v-model="searchFilters.orientation"
+          column
+          multiple
+          color="primary"
+          class="filter-options"
+        >
+          <v-chip v-for="o in orientations" :key="o" :value="o" label size="small" variant="tonal" class="filter-chip">{{ o }}</v-chip>
+        </v-chip-group>
+      </div>
+    </div>
+
+    <div class="filter-actions">
+      <v-btn variant="outlined" prepend-icon="mdi-refresh" @click="resetFilters" :disabled="loading">
+        重置
+      </v-btn>
+      <v-btn color="primary" variant="flat" prepend-icon="mdi-filter-variant" @click="applyFiltersAndResetPage" :loading="loading">
+        应用筛选
+      </v-btn>
+    </div>
+  </v-card>
+
+  <div class="list-container">
+    <v-alert v-if="loadError && !loading" type="error" variant="tonal" class="mb-4" closable @click:close="loadError = ''">
+      {{ loadError }}
+      <template #append><v-btn size="small" variant="text" @click="loadHouses">重试</v-btn></template>
+    </v-alert>
+    <v-progress-linear
+      v-if="loading && hasLoaded"
+      indeterminate
+      color="primary"
+      class="results-progress"
+    ></v-progress-linear>
+
+    <div v-if="loading && !hasLoaded" class="house-empty">
+      <v-progress-circular indeterminate color="primary" size="44"></v-progress-circular>
+      <p>正在加载房源数据...</p>
+    </div>
+
+    <v-row v-else-if="houses.length > 0">
+      <v-col cols="12" md="8">
+        <div class="mb-3">
+          <span class="house-muted text-body-2">共找到 <strong class="text-primary">{{ pagination.total }}</strong> 套房源</span>
+        </div>
+        <v-card
+          v-for="house in houses"
+          :key="house.id"
+          class="mb-4 house-card house-hover-lift"
+          flat
+          @click="goToHouseDetail(house.id)"
+          role="link"
+          tabindex="0"
+          @keydown.enter="goToHouseDetail(house.id)"
+          @keydown.space.prevent="goToHouseDetail(house.id)"
+        >
+          <div class="house-card__body">
+            <div class="house-card__media">
+              <v-img
+                cover
+                :src="house.image_url || 'https://cdn.vuetifyjs.com/images/cards/docks.jpg'"
+                :aspect-ratio="4 / 3"
+                class="house-image"
+              ></v-img>
+            </div>
+
+            <div class="house-card__info">
+              <div>
+                <h3 class="house-card__title">{{ house.title }}</h3>
+                <div class="house-muted text-body-2 mb-2">
+                  <v-icon size="14" class="mr-1">mdi-map-marker-outline</v-icon>{{ house.community }}{{ house.block ? ` · ${house.block}` : '' }}
+                </div>
+                <div class="house-card__meta mb-3">
+                  <span>{{ house.rooms }}</span>
+                  <span class="meta-dot">·</span>
+                  <span>{{ house.area }}m²</span>
+                  <span class="meta-dot">·</span>
+                  <span>{{ house.direction }}</span>
+                  <span class="meta-dot">·</span>
+                  <span>{{ house.decoration || '简装' }}</span>
+                </div>
+                <div class="house-card__tags">
+                  <v-chip v-if="house.subway === 1" color="info" variant="tonal" size="small" label>近地铁</v-chip>
+                  <v-chip v-if="house.tag_new === 1" color="warning" variant="tonal" size="small" label>新上房源</v-chip>
+                  <v-chip v-if="house.available === 1" color="success" variant="tonal" size="small" label>随时可看</v-chip>
+                  <v-chip color="primary" variant="tonal" size="small" label>{{ house.rent_type }}</v-chip>
+                </div>
+              </div>
+
+              <div class="house-card__footer">
+                <div class="house-muted text-caption house-card__publisher">
+                  <span><v-icon size="14" class="mr-1">mdi-account-circle-outline</v-icon>{{ house.landlord || '个人房源' }}</span>
+                  <span><v-icon size="14" class="mr-1">mdi-clock-time-eight-outline</v-icon>{{ formatPublishTime(house.publish_time) }}</span>
+                </div>
+                <div class="house-price house-card__price">
+                  {{ house.price }}<small>元/月</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </v-card>
+        <v-pagination
+          v-if="pagination.pages > 1"
+          v-model="pagination.page"
+          :length="pagination.pages"
+          active-color="primary"
+          class="mt-5"
+          density="comfortable"
+        ></v-pagination>
+      </v-col>
+
+      <v-col cols="12" md="4">
+        <div class="side-sticky">
+          <v-card class="recommendation-card" flat>
+            <div class="px-4 pt-4 pb-2">
+              <div class="d-flex align-center">
+                <v-icon color="accent" class="mr-2">mdi-fire</v-icon>
+                <h2 class="house-section-title">热门推荐</h2>
+              </div>
+              <div class="house-muted text-caption mt-1">周边好房不容错过</div>
+            </div>
+
+            <v-card-text class="pt-2">
+              <template v-if="loadingRecommendation">
+                <v-skeleton-loader type="image, article"></v-skeleton-loader>
+              </template>
+
+              <template v-else-if="recommendedHouse">
                 <v-img
+                  v-if="recommendedHouse.image_url"
+                  :src="recommendedHouse.image_url"
+                  :aspect-ratio="16 / 10"
                   cover
-                  :src="house.image_url || 'https://cdn.vuetifyjs.com/images/cards/docks.jpg'" 
-                  aspect-ratio="1.33" rounded="sm"
-                  class="house-image"
+                  class="house-image mb-3"
                 ></v-img>
-              </v-col>
-
-              <v-col cols="12" sm="8" class="d-flex flex-column justify-space-between pa-3">
-                <div>
-                  <v-card-title class="pa-0 mb-1 text-h6 font-weight-bold house-title-clamp">
-                    {{ house.title }}
-                  </v-card-title>
-                  
-                  <v-card-subtitle class="pa-0 mb-2 text-body-2 text-grey-darken-1">
-                    {{ house.community }} {{ house.block ? `- ${house.block}` : '' }}
-                  </v-card-subtitle>
-
-                  <div class="text-body-2 text-grey-darken-2 mb-2">
-                    <span>{{ house.rooms }}</span>
-                    <span class="mx-1">|</span>
-                    <span>{{ house.area }}m²</span> <span class="mx-1">|</span>
-                    <span>{{ house.direction }}</span>
-                    <span class="mx-1">|</span>
-                    <span>{{ house.decoration || '简装' }}</span> </div>
-                
-                  <div class="mb-2">
-                    <v-chip v-if="house.subway === 1" color="blue" text-color="blue-darken-2" size="small" label class="mr-1 mb-1">近地铁</v-chip>
-                    <v-chip v-if="house.tag_new === 1" color="orange" text-color="orange-darken-2" size="small" label class="mr-1 mb-1">新上房源</v-chip>
-                    <v-chip v-if="house.available === 1" color="primary" text-color="green-darken-2" size="small" label class="mr-1 mb-1">随时可看</v-chip>
-                    <v-chip color="green" text-color="cyan-darken-2" size="small" label class="mr-1 mb-1">{{ house.rent_type }}</v-chip>
-                  </div>
+                <div class="d-flex align-center mb-2">
+                  <v-chip variant="tonal" color="primary" size="small" label class="mr-2">
+                    {{ recommendedHouse.rent_type || '整租' }}
+                  </v-chip>
+                  <span class="rec-title">
+                    {{ recommendedHouse.title.split(' ')[0] || '尚鑫海悦' }}
+                  </span>
                 </div>
 
-                <div class="d-flex justify-space-between align-center mt-auto pt-2">
-                  <div class="text-caption text-grey-darken-1">
-                    <v-icon size="small" start>mdi-account-circle-outline</v-icon>
-                    <span>{{ house.landlord || '个人房源' }}</span> <span class="mx-2 VPublishInfoDivider">/</span>
-                    <v-icon size="small" start>mdi-clock-time-eight-outline</v-icon>
-                    <span>{{ formatPublishTime(house.publish_time) }}</span>
-                  </div>
-                  <div class="text-h5 font-weight-bold" style="color: #FA5741;">
-                    {{ house.price }} <span class="text-subtitle-2">元/月</span>
-                  </div>
+                <div class="house-card__meta mb-3">
+                  <span>{{ recommendedHouse.rooms || '1室0厅' }}</span>
+                  <template v-if="recommendedHouse.area">
+                    <span class="meta-dot">·</span>
+                    <span>{{ recommendedHouse.area }}m²</span>
+                  </template>
+                  <template v-if="recommendedHouse.direction">
+                    <span class="meta-dot">·</span>
+                    <span>{{ recommendedHouse.direction }}</span>
+                  </template>
+                  <template v-if="recommendedHouse.decoration">
+                    <span class="meta-dot">·</span>
+                    <span>{{ recommendedHouse.decoration }}</span>
+                  </template>
                 </div>
-              </v-col>
-            </v-row>
+
+                <div class="d-flex align-center justify-space-between">
+                  <div class="house-muted text-caption d-flex align-center">
+                    <v-avatar color="primary" variant="tonal" size="26" class="mr-2">
+                      <v-icon icon="mdi-account" size="16"></v-icon>
+                    </v-avatar>
+                    {{ recommendedHouse.landlord || '个人房源' }}
+                  </div>
+                  <span class="house-price text-h6">
+                    {{ recommendedHouse.price }}<small>元/月</small>
+                  </span>
+                </div>
+              </template>
+
+              <div v-else class="house-empty py-6">
+                <v-icon>mdi-home-search-outline</v-icon>
+                <span>暂无热门推荐</span>
+              </div>
+            </v-card-text>
+
+            <v-card-actions class="px-4 pb-4 pt-0">
+              <v-btn
+                color="primary"
+                variant="tonal"
+                block
+                append-icon="mdi-arrow-right"
+                :disabled="!recommendedHouse"
+                @click="recommendedHouse && goToHouseDetail(recommendedHouse.id)"
+              >
+                查看详情
+              </v-btn>
+            </v-card-actions>
           </v-card>
-           <v-pagination
-            v-if="pagination.pages > 1"
-            v-model="pagination.page"
-            :length="pagination.pages"
-            
-            class="mt-5"
-            density="compact"
-          ></v-pagination>
-        </v-col>
+        </div>
+      </v-col>
+    </v-row>
 
-        <v-col cols="12" md="4">
-                    <v-card
-                      class="mx-auto recommendation-card"
-                      prepend-icon="mdi-star-circle-outline"
-                      width="100%"
-                      elevation="2"
-                    >
-                      <template v-slot:title>
-                        <span class="font-weight-black text-primary">热门推荐</span>
-                      </template>
-                      
-                      <v-card-subtitle class="text-caption">周边好房不容错过</v-card-subtitle>
-                      
-                      <v-card-text class="bg-surface-light pt-4 pb-2">
-                        <template v-if="loadingRecommendation">
-                          <v-skeleton-loader type="article"></v-skeleton-loader>
-                        </template>
-                        
-                        <template v-else-if="recommendedHouse">
-                          <v-row class="mb-2">
-                            <v-chip variant="outlined" color="primary" size="small" class="mr-2">
-                              {{ recommendedHouse.rent_type || '整租' }}
-                            </v-chip>
-                            <span class="text-subtitle-1 font-weight-medium">
-                              {{ recommendedHouse.title.split(' ')[0] || '尚鑫海悦' }}
-                            </span>
-                          </v-row>
-                          
-                          <v-row class="mb-3">
-                            <div class="d-flex align-center">
-                              <v-icon icon="mdi-floor-plan" size="small" class="mr-1"></v-icon>
-                              <span class="text-caption">{{ recommendedHouse.rooms || '1室0厅' }}</span>
-                              
-                              <v-icon 
-                                v-if="recommendedHouse.direction"
-                                icon="mdi-compass" 
-                                size="small" 
-                                class="ml-3 mr-1"
-                              ></v-icon>
-                              <span class="text-caption" v-if="recommendedHouse.direction">
-                                {{ recommendedHouse.direction }}
-                              </span>
-                            </div>
-                          </v-row>
-                          
-                          <v-row class="mb-2">
-                            <v-chip v-if="recommendedHouse.decoration" size="small" class="mr-1">
-                              {{ recommendedHouse.decoration }}
-                            </v-chip>
-                            <v-chip 
-                              v-if="recommendedHouse.area" 
-                              size="small" 
-                              variant="outlined"
-                            >
-                              {{ recommendedHouse.area }}m²
-                            </v-chip>
-                          </v-row>
-                          
-                          <v-row class="align-center">
-                            <span class="text-h6 text-primary font-weight-bold">
-                              {{ recommendedHouse.price }}<span class="text-subtitle-2">元/月</span>
-                            </span>
-                            
-                            <v-spacer></v-spacer>
-                            
-                            <div class="d-flex align-center">
-                              <v-avatar color="primary" size="32">
-                                <v-icon icon="mdi-account" size="small"></v-icon>
-                              </v-avatar>
-                              <span class="text-caption ml-2">
-                                {{ recommendedHouse.landlord || '个人房源' }}
-                              </span>
-                            </div>
-                          </v-row>
-                        </template>
-                        
-                        <template v-else>
-                          <v-alert type="info" variant="tonal" class="my-2">
-                            暂无热门推荐
-                          </v-alert>
-                        </template>
-                      </v-card-text>
-                      
-                      <v-divider class="my-2"></v-divider>
-
-                      <v-card-actions class="px-4 pb-4 pt-0">
-                        <v-btn 
-                          color="primary" 
-                          variant="tonal" 
-                          block
-                          append-icon="mdi-arrow-right"
-                          :disabled="!recommendedHouse"
-                          @click="recommendedHouse && goToHouseDetail(recommendedHouse.id)"
-                        >
-                          查看详情
-                        </v-btn>
-                      </v-card-actions>
-                    </v-card>
-        </v-col>
-      </v-row>
-      
-      <v-row v-else-if="!loading && houses.length === 0" dense>
-          <v-col cols="12" class="text-center py-10">
-            <v-icon size="70" color="grey-lighten-1">mdi-home-alert-outline</v-icon>
-            <p class="mt-4 text-h6 text-grey-darken-1">抱歉，没有找到符合条件的房源</p>
-            <p class="text-grey">请尝试调整您的筛选条件或稍后再试。</p>
-          </v-col>
-      </v-row>
-    </div>  
-  </v-container>
+    <v-card v-else-if="!loading && houses.length === 0" flat>
+      <div class="house-empty">
+        <v-icon>mdi-home-alert-outline</v-icon>
+        <p class="text-h6">抱歉，没有找到符合条件的房源</p>
+        <p class="text-body-2">请尝试调整您的筛选条件或稍后再试。</p>
+      </div>
+    </v-card>
+  </div>
 </div>
 </template>
 
@@ -375,6 +357,7 @@ const searchFilters = reactive<ComponentSearchFilters>({
 const houses = ref<HouseInfo[]>([]);
 const loading = ref(true); // Start with loading true
 const hasLoaded = ref(false);
+const loadError = ref("");
 let latestRequestId = 0;
 const pagination = reactive({
   page: 1,
@@ -465,6 +448,7 @@ const loadHouses = async () => {
     const apiParams: ApiHouseFiltersConfig = {
       page: pagination.page,
       per_page: pagination.per_page,
+      available: 1,
     };
 
     if (searchFilters.community) apiParams.community = searchFilters.community;
@@ -482,13 +466,11 @@ const loadHouses = async () => {
       apiParams.orientation = searchFilters.orientation.join(',');
     }
 
-    // Note: Boolean filters like 'subway' or 'available' are not in current searchFilters
-    // If you add them, ensure they are converted to 0/1 if backend expects numbers.
-
     const response = await fetchHouses(apiParams);
     if (requestId !== latestRequestId) return;
 
     houses.value = response.items;
+    loadError.value = "";
     pagination.total = response.total;
     pagination.pages = response.pages;
     pagination.per_page = response.per_page;
@@ -496,6 +478,7 @@ const loadHouses = async () => {
   } catch (error) {
     if (requestId !== latestRequestId) return;
     console.error("Failed to load houses in component:", error);
+    loadError.value = "房源加载失败，请稍后重试";
     if (!hasLoaded.value) {
       houses.value = [];
       pagination.total = 0;
@@ -588,71 +571,77 @@ onMounted(async () => {
 
 </script>
 
-<style scoped>
-.filter-label {
-  font-weight: 500;
-  color: rgba(0, 0, 0, 0.65); /* Slightly darker for better contrast */
-  margin-right: 8px;
-  white-space: nowrap;
-  align-self: center; /* Align with chips vertically */
-}
-
-.v-chip-group .v-chip {
-  margin: 4px !important; /* ensure spacing */
-}
-
-.house-card {
-  border: 1px solid #e0e0e0; /* Subtle border */
-}
-.house-card:hover {
-  box-shadow: 0 8px 16px rgba(0,0,0,0.12) !important;
-  transform: translateY(-3px);
-  transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
-}
-.list-container {
-  position: relative;
-}
-.results-progress {
-  position: absolute;
-  top: 20px;
-  left: 0;
-  right: 0;
-  z-index: 2;
-}
-.recommendation-card {
-  border: 1px solid #e0e0e0;
-}
-</style>
-
 <style scoped lang="scss">
-// Scoped SCSS can go here if needed, original styles were mostly CSS
-.house-image {
-  border: 1px solid var(--house-line);
-  transition: transform .35s ease;
+.filter-panel { padding: 20px 24px; }
+.filter-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 14px; }
+.filter-rows { border-top: 1px dashed var(--house-line); margin-top: 16px; padding-top: 6px; }
+.filter-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 4px 0;
 }
-.house-card { border-radius: 16px; overflow: hidden; transition: transform .22s ease, box-shadow .22s ease; }
-.house-card:hover { transform: translateY(-3px); box-shadow: 0 18px 34px rgba(23, 63, 58, .12) !important; }
-.house-card:hover .house-image { transform: scale(1.025); }
-.house-title-clamp {
-  display: -webkit-box;
-  -webkit-line-clamp: 1; 
-  -webkit-box-orient: vertical;
+.filter-label {
+  flex: 0 0 56px;
+  line-height: 32px;
+  margin-top: 4px;
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--house-muted);
+}
+.filter-options { flex: 1 1 auto; min-width: 0; padding: 0; }
+.filter-options--price { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+.filter-options--price :deep(.v-chip-group) { padding: 0; }
+.filter-chip { font-size: .8125rem; height: 30px !important; padding: 0 12px; }
+.price-custom { display: flex; align-items: center; gap: 8px; }
+.price-input { width: 96px; flex: 0 0 96px; }
+.price-input :deep(.v-field__input) { min-height: 32px; padding-top: 4px; padding-bottom: 4px; font-size: .8125rem; }
+.filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--house-line);
+}
+
+.list-container { position: relative; }
+.results-progress { position: absolute; top: -8px; left: 0; right: 0; z-index: 2; }
+
+.house-card { overflow: hidden; cursor: pointer; }
+.house-card__body { display: flex; gap: 20px; padding: 16px; }
+.house-card__media { flex: 0 0 32%; max-width: 260px; }
+.house-image { border-radius: 10px; }
+.house-card__info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
+.house-card__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--house-ink);
+  margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.4; /* Adjust for desired spacing */
-  // min-height: calc(1.25rem * 1.4); /* text-h6 font-size (1.25rem default) * line-height */
-  // The above min-height might be too specific, Vuetify usually handles heights.
+  white-space: nowrap;
 }
+.house-card__meta { font-size: .9rem; color: var(--house-ink); }
+.meta-dot { margin: 0 6px; color: var(--house-muted); }
+.house-card__tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.house-card__footer { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 12px; }
+.house-card__publisher { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.house-card__price { font-size: 1.5rem; line-height: 1; white-space: nowrap; }
 
-// Responsive custom price input area
-@media (max-width: 959px) { // Vuetify's 'md' breakpoint
-  .d-flex.align-center.flex-wrap .v-text-field {
-    max-width: calc(50% - 20px) !important; /* Adjust for spacing */
-    flex-basis: calc(50% - 20px) !important;
-  }
-  .d-flex.align-center.flex-wrap .v-btn {
-    width: 100%;
-    margin-top: 8px;
-  }
+.side-sticky { position: sticky; top: 80px; }
+.rec-title { font-weight: 700; color: var(--house-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 959px) {
+  .side-sticky { position: static; }
+}
+@media (max-width: 599px) {
+  .filter-panel { padding: 16px; }
+  .filter-row { flex-direction: column; gap: 0; }
+  .filter-label { flex: none; line-height: 1.6; margin-top: 4px; }
+  .filter-actions > .v-btn { flex: 1 1 0; }
+  .house-card__body { flex-direction: column; gap: 12px; padding: 12px; }
+  .house-card__media { flex: none; max-width: none; }
 }
 </style>

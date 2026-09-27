@@ -1,3 +1,4 @@
+<!-- 【未使用】无任何引用，可在确认后删除。 -->
 <template>
   <div class="max-w-5xl mx-auto px-6 py-6">
     <v-card class="news-card" elevation="3">

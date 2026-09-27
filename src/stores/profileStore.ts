@@ -67,7 +67,7 @@ export const useProfileStore = defineStore({
     
     // 清除用户信息 (例如退出登录时调用)
     clearUserProfile() {
-      this.user = null;
+      this.$reset();
     },
     getUser(){
     return{user:this.user} ;
@@ -80,33 +80,17 @@ export const useProfileStore = defineStore({
       };
     },
     setUser(userVO: any) {
+    const value = (camel: string, snake: string, fallback: any = "") => userVO?.[camel] ?? userVO?.[snake] ?? fallback;
     this.user = {
-      addr: userVO.addr,
-      collect_id: userVO.collect_id,
-      email: userVO.email,
-      id: userVO.id,
-      identityCard: userVO.identityCard,
-      name: userVO.name,
-      phone: userVO.phone,
-      seen_id: userVO.seen_id,
-      userType: userVO.userType,
-      avatarUrl: userVO.avatarUrl,
+      addr: value('addr', 'addr'), collect_id: value('collect_id', 'collect_id'), email: value('email', 'email'),
+      id: value('id', 'id', null), identityCard: value('identityCard', 'identity_card'), name: value('name', 'name'),
+      phone: value('phone', 'phone'), seen_id: value('seen_id', 'seen_id'), userType: value('userType', 'user_type', 1),
+      avatarUrl: value('avatarUrl', 'avatar_url'),
     }
   },
     // 一次性设置完整 profile 对象（从后端接口获取后的数据）
     setProfileFromVO(vo: any) {
-      this.user = {
-        addr: vo.addr,
-        collect_id: vo.collect_id,
-        email: vo.email,
-        id: vo.id,
-        identityCard: vo.identityCard,
-        name: vo.name,
-        phone: vo.phone,
-        seen_id: vo.seen_id,
-        userType: vo.userType,
-        avatarUrl: vo.avatarUrl,
-      };
+      this.setUser(vo);
       
     },
      
@@ -123,5 +107,8 @@ export const useProfileStore = defineStore({
       this.notifications = { ...this.notifications, ...settings };
     },
   },
-  persist: true,
+  // 只持久化非敏感的展示字段；身份证号、手机号等 PII 不落 localStorage
+  persist: {
+    pick: ["basic", "account", "notifications", "user.id", "user.name", "user.userType", "user.avatarUrl"],
+  },
 });

@@ -8,22 +8,57 @@
 @import "./common/beautify.scss";
 @import "vue3-perfect-scrollbar/dist/vue3-perfect-scrollbar.css";
 
-:root {
-  --house-ink: #17212b;
+:root,
+.v-theme--light {
+  --house-ink: #1f2933;
   --house-forest: #0f766e;
-  --house-paper: #f7f9fc;
-  --house-coral: #0f766e;
-  --house-line: #e3e8ef;
+  --house-paper: #f7f8fa;
+  --house-coral: #f2622e;
+  --house-primary: var(--house-forest);
+  --house-muted: #6b7785;
+  --house-line: #e6e9ee;
   --house-surface: #ffffff;
+  --house-soft: #eef7f5;
+  --house-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .06);
+  --house-shadow-hover: 0 2px 4px rgba(16, 24, 40, .06), 0 16px 36px rgba(16, 24, 40, .12);
+  --house-radius: 12px;
 }
 
-body { background: var(--house-paper); color: var(--house-ink); }
-.v-application { font-family: "Noto Serif SC", "Source Han Serif SC", serif; background: var(--house-paper) !important; }
-.v-app-bar { background: rgba(255, 255, 255, .94) !important; border-bottom: 1px solid var(--house-line) !important; backdrop-filter: blur(14px); }
-.v-navigation-drawer { background: #27313d !important; color: #f4f7fb !important; }
-.v-navigation-drawer .v-list-item { border-radius: 10px; margin: 4px 10px; }
-.v-navigation-drawer .v-list-item:hover { background: rgba(255,255,255,.07); }
-.v-navigation-drawer .v-list-item--active { background: #3b495a; }
-.v-navigation-drawer .v-list-item__prepend, .v-navigation-drawer .v-list-item-title { color: inherit !important; }
-.v-card { border: 1px solid var(--house-line); box-shadow: 0 12px 30px rgba(23, 33, 43, .06) !important; }
+.v-theme--dark {
+  --house-ink: #e6ebf0;
+  --house-forest: #2dd4bf;
+  --house-paper: #0f1419;
+  --house-coral: #ff8a5c;
+  --house-muted: #94a1b0;
+  --house-line: #27313c;
+  --house-surface: #171d24;
+  --house-soft: #13302d;
+  --house-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+  --house-shadow-hover: 0 2px 4px rgba(0, 0, 0, .35), 0 16px 36px rgba(0, 0, 0, .4);
+}
+
+body { background: var(--house-paper); color: var(--house-ink); -webkit-font-smoothing: antialiased; }
+.v-application { background: var(--house-paper) !important; color: var(--house-ink); }
+.v-app-bar.v-toolbar {
+  background: rgba(var(--v-theme-surface), .88) !important;
+  border-bottom: 1px solid var(--house-line) !important;
+  backdrop-filter: saturate(160%) blur(14px);
+}
+.v-navigation-drawer { background: rgb(var(--v-theme-surface)) !important; border-right: 1px solid var(--house-line) !important; }
+.v-navigation-drawer .v-list-item { border-radius: 10px; margin: 2px 12px; }
+.v-card { border: 1px solid var(--house-line); box-shadow: var(--house-shadow) !important; }
+.v-card--variant-flat, .v-card--variant-text, .v-card--variant-tonal, .v-menu .v-card, .v-overlay .v-card { box-shadow: var(--house-shadow) !important; }
 .v-btn--variant-elevated { box-shadow: none !important; }
+.v-btn { text-transform: none !important; }
+.page-shell { width: min(100%, 1280px); margin-inline: auto; padding: 28px 24px 48px; }
+@media (max-width: 600px) { .page-shell { padding: 16px 14px 32px; } }
+
+// 通用展示工具类（价格、空状态、状态标签）
+.house-price { color: var(--house-coral); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.house-price small, .house-price .unit { font-size: .75em; font-weight: 500; margin-left: 2px; opacity: .85; }
+.house-muted { color: var(--house-muted); }
+.house-section-title { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; color: var(--house-ink); }
+.house-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 56px 16px; color: var(--house-muted); text-align: center; }
+.house-empty .v-icon { font-size: 48px; opacity: .45; }
+.house-hover-lift { transition: transform .2s ease, box-shadow .2s ease; }
+.house-hover-lift:hover { transform: translateY(-3px); box-shadow: var(--house-shadow-hover) !important; }

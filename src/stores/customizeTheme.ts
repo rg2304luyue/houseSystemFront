@@ -23,12 +23,11 @@ export const useCustomizeThemeStore = defineStore({
     primaryColor: {
       colorId: 2,
       colorName: "grey",
-      colorValue: "#344767",
+      colorValue: "#0f766e",
     },
     themeDrawer: false, // 新增这个状态
     localCode: "en",
-    mainSidebar: true,
-    // mainSidebar: isMobile() ? false : true,
+    mainSidebar: false,
   }),
 
   persist: {

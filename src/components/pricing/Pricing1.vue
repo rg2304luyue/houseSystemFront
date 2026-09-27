@@ -1,3 +1,4 @@
+<!-- 【未使用】仅被未使用的 PricingPage 引用，可在确认后删除。 -->
 <!--
 * @Component:
 * @Maintainer: J.K. Yang

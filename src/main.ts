@@ -16,6 +16,11 @@ import i18n from "./plugins/i18n";
 import "vue3-lottie/dist/style.css";
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import 'vue-advanced-cropper/dist/style.css';
+
+// Remove the legacy browser-persisted OpenAI key. The active AI service is
+// configured only on the FastAPI server and no provider secret belongs here.
+localStorage.removeItem("chatGPT");
+
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);
 const app = createApp(App);

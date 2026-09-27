@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import apiClient from "@/api/client";
 import router from "@/router";
 import { useProfileStore } from "@/stores/profileStore";
+import { clearAuthArtifacts } from "@/utils/authSession";
 
 interface Profile {
   id: string;
@@ -28,6 +29,45 @@ export const useAuthStore = defineStore("auth", {
   },
 
   actions: {
+    async refreshProfile() {
+      try {
+        const response = await apiClient.get("/users/me");
+        useProfileStore().setUser(response.data);
+        this.isLoggedIn = true;
+      } catch (error: any) {
+        useProfileStore().$reset();
+        if ([401, 403].includes(error?.response?.status)) {
+          clearAuthArtifacts();
+          this.token = "";
+          this.isLoggedIn = false;
+          this.user = null;
+          this.profile = null;
+        }
+        throw error;
+      }
+    },
+    async completeLogin(authPayload: any) {
+      const token = authPayload?.token;
+      if (typeof token !== "string" || !token.trim()) throw new Error("登录响应缺少有效凭证");
+      const profileStore = useProfileStore();
+      try {
+        const profileRes = await apiClient.get("/users/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        profileStore.setUser(profileRes.data);
+        this.user = authPayload;
+        this.setToken(token);
+        this.setLoggedIn(true);
+      } catch (error) {
+        clearAuthArtifacts();
+        this.token = "";
+        this.isLoggedIn = false;
+        this.user = null;
+        this.profile = null;
+        profileStore.$reset();
+        throw error;
+      }
+    },
     setToken(newToken: string) {
       this.token = newToken;
       localStorage.setItem("token", newToken);
@@ -67,15 +107,7 @@ export const useAuthStore = defineStore("auth", {
         const response = await apiClient.post("/auth/login", { phone, password });
 
         // interceptor 已校验 success 并解包，response.data 已是内层 data
-        this.setLoggedIn(true);
-        this.user = response.data;
-        this.setToken(response.data.token);
-
-        const profileRes = await apiClient.get("/users/me");
-        const profileStore = useProfileStore();
-        profileStore.setUser(profileRes.data);
-
-        router.replace("/dashboard");
+        await this.completeLogin(response.data);
       } catch (error: any) {
         const errorMsg = error?.response?.data?.detail || error?.response?.data?.message || error.message;
         console.error("请求异常：", errorMsg);
@@ -88,15 +120,7 @@ export const useAuthStore = defineStore("auth", {
         const response = await apiClient.post("/auth/email-login", { email, password });
 
         // interceptor 已校验 success 并解包，response.data 已是内层 data
-        this.setLoggedIn(true);
-        this.user = response.data;
-        this.setToken(response.data.token);
-
-        const profileRes = await apiClient.get("/users/me");
-        const profileStore = useProfileStore();
-        profileStore.setUser(profileRes.data);
-
-        router.replace("/dashboard");
+        await this.completeLogin(response.data);
       } catch (error: any) {
         const errorMsg = error?.response?.data?.detail || error?.response?.data?.message || error.message;
         console.error("邮箱登录请求异常：", errorMsg);
@@ -105,9 +129,12 @@ export const useAuthStore = defineStore("auth", {
     },
 
     logout() {
-      this.removeToken();
+      clearAuthArtifacts();
+      this.token = "";
       this.isLoggedIn = false;
       this.user = null;
+      this.profile = null;
+      useProfileStore().$reset();
       router.push({ name: "auth-signin" });
     }
   },

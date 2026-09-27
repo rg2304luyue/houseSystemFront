@@ -41,8 +41,18 @@ onMounted(async () => {
       }),
     ]);
     house.value = houseData;
-    if (detailResponse?.data) detail.value = detailResponse.data;
-    await apiClient.post(`/houses/${id}/increment-view`);
+    if (detailResponse?.data && typeof detailResponse.data === "object") {
+      detail.value = {
+        ...detail.value,
+        ...detailResponse.data,
+        facilities: { ...detail.value.facilities, ...(detailResponse.data.facilities || {}) },
+        map_coordinates: { ...detail.value.map_coordinates, ...(detailResponse.data.map_coordinates || {}) },
+        photos: Array.isArray(detailResponse.data.photos) ? detailResponse.data.photos : detail.value.photos,
+      };
+    }
+    void apiClient.post(`/houses/${id}/increment-view`).catch((error) => {
+      console.warn("浏览量上报失败，不影响房源详情展示", error);
+    });
   } catch (error: any) {
     errorMessage.value = error?.response?.data?.detail || "房源加载失败";
   } finally {
@@ -52,17 +62,17 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="detail-page pa-4 pa-md-7">
-    <v-skeleton-loader v-if="loading" type="card, article" />
+  <div class="detail-page">
+    <v-skeleton-loader v-if="loading" type="image, article" />
     <v-alert v-else-if="errorMessage" type="error" variant="tonal">{{ errorMessage }}</v-alert>
-    <v-row v-else-if="house" class="flex-0" dense>
-      <v-col cols="12" xl="4">
+    <v-row v-else-if="house">
+      <v-col cols="12">
         <HouseCard1 :house="house" :detail="detail" />
       </v-col>
-      <v-col cols="12" xl="4">
+      <v-col cols="12" md="5">
         <HouseFacilities :facilities="detail.facilities" />
       </v-col>
-      <v-col cols="12" xl="4">
+      <v-col cols="12" md="7">
         <Map :address="`湖南省长沙市${house.region || ''}${house.block || ''}${house.community || ''}`" />
       </v-col>
       <v-col cols="12">
@@ -71,7 +81,3 @@ onMounted(async () => {
     </v-row>
   </div>
 </template>
-
-<style scoped>
-.detail-page { max-width: 1440px; margin: 0 auto; }
-</style>

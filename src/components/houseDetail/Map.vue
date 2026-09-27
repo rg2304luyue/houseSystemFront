@@ -1,19 +1,13 @@
 <template>
-  
-  <v-card  class="my-5" rounded>
-    <v-card-actions><v-card-title class="card-title text-h5">详细位置</v-card-title>
-    <v-spacer></v-spacer>
-    
-    </v-card-actions>
-    
-    <v-divider></v-divider>
-      <v-container fluid>
-        <MaptoolBar/>
-        <div ref="containerRef" style="width: 100%; height: 400px; position: relative"> </div>
-      </v-container>
-    </v-card>
-
-  
+  <v-card flat class="map-card h-100">
+    <div class="d-flex align-center px-5 pt-5 pb-3">
+      <h2 class="house-section-title">详细位置</h2>
+    </div>
+    <div class="map-wrap mx-5 mb-5">
+      <MaptoolBar/>
+      <div ref="containerRef" style="width: 100%; height: 400px; position: relative"> </div>
+    </div>
+  </v-card>
 </template>
 
 <script setup lang="ts">
@@ -87,3 +81,13 @@ watch(() => props.address, (newAddr) => {
   }
 })
 </script>
+
+<style scoped>
+.map-wrap {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--house-line);
+  background: var(--house-soft);
+}
+</style>

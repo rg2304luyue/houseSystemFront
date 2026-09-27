@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { Cropper } from 'vue-advanced-cropper';
+import { useSnackbarStore } from "@/stores/snackbarStore";
 // 注意：确保 'vue-advanced-cropper/dist/style.css' 已经在你的 main.ts 中全局导入
 
 // --- 定义组件的接口 (Props & Emits) ---
+const snackbarStore = useSnackbarStore();
 const props = defineProps<{
   // 用于 v-model 控制对话框的显示/隐藏
   dialog: boolean;
@@ -46,11 +48,11 @@ const onFileSelected = (event: Event) => {
 
   // 基础验证
   if (!file.type.startsWith('image/')) {
-    alert('请选择一个图片文件');
+    snackbarStore.showWarningMessage('请选择一个图片文件');
     return;
   }
   if (file.size > 5 * 1024 * 1024) { // 5MB
-    alert('图片大小不能超过 5MB');
+    snackbarStore.showWarningMessage('图片大小不能超过 5MB');
     return;
   }
 
@@ -79,7 +81,7 @@ const onConfirmCrop = () => {
         // 触发 upload 事件，将 blob 和 done 函数都传给父组件
         emit('upload', blob, done);
       } else {
-        alert('图片处理失败，请重试');
+        snackbarStore.showErrorMessage('图片处理失败，请重试');
         isProcessing.value = false;
       }
     }, 'image/jpeg', 0.9); // 输出为高质量的JPG
@@ -109,11 +111,11 @@ watch(() => props.dialog, (isOpen) => {
     persistent
   >
     <v-card rounded="lg">
-      <v-card-title class="d-flex align-center">
-        <v-icon class="mr-2">mdi-account-circle-outline</v-icon>
+      <v-card-title class="d-flex align-center py-3 px-5 font-weight-bold">
+        <v-icon class="mr-2" color="primary">mdi-account-circle-outline</v-icon>
         <span>更换头像</span>
         <v-spacer />
-        <v-btn icon variant="text" @click="closeDialog" :disabled="isProcessing">
+        <v-btn icon variant="text" size="small" @click="closeDialog" :disabled="isProcessing">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-card-title>
@@ -130,9 +132,11 @@ watch(() => props.dialog, (isOpen) => {
         />
 
         <div v-if="!imageSrc" class="upload-placeholder" @click="triggerFileInput">
-          <v-icon size="64" color="grey-lighten-1">mdi-cloud-upload-outline</v-icon>
-          <div class="text-h6 mt-3 text-grey-darken-1">点击或拖拽图片</div>
-          <div class="text-caption text-grey">支持 JPG, PNG, WEBP (最大 5MB)</div>
+          <span class="upload-icon">
+            <v-icon size="36" color="primary">mdi-cloud-upload-outline</v-icon>
+          </span>
+          <div class="text-subtitle-1 font-weight-bold mt-4">点击选择图片</div>
+          <div class="text-caption house-muted mt-1">支持 JPG、PNG、WEBP（最大 5MB）</div>
         </div>
 
         <div v-else style="height: 400px; width: 100%;">
@@ -148,14 +152,14 @@ watch(() => props.dialog, (isOpen) => {
       <v-divider />
 
       <v-card-actions class="pa-4">
-        <v-btn v-if="imageSrc" @click="triggerFileInput" :disabled="isProcessing">
+        <v-btn v-if="imageSrc" variant="tonal" color="primary" prepend-icon="mdi-image-refresh-outline" @click="triggerFileInput" :disabled="isProcessing">
           重新选择
         </v-btn>
         <v-spacer />
-        <v-btn @click="closeDialog" :disabled="isProcessing">取消</v-btn>
+        <v-btn variant="text" @click="closeDialog" :disabled="isProcessing">取消</v-btn>
         <v-btn
           color="primary"
-          variant="elevated"
+          variant="flat"
           @click="onConfirmCrop"
           :loading="isProcessing"
           :disabled="!imageSrc"
@@ -175,14 +179,24 @@ watch(() => props.dialog, (isOpen) => {
   justify-content: center;
   width: 100%;
   height: 400px;
-  border: 2px dashed #e0e0e0;
-  border-radius: 8px;
+  border: 2px dashed var(--house-line);
+  border-radius: var(--house-radius);
+  color: var(--house-ink);
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 
   &:hover {
-    border-color: #1976d2; // Vuetify primary color
-    background-color: #fafafa;
+    border-color: rgb(var(--v-theme-primary));
+    background-color: var(--house-soft);
   }
+}
+
+.upload-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--house-soft);
 }
 </style>

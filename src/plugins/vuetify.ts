@@ -24,34 +24,42 @@ import { zhHans } from 'vuetify/locale'
 const Lighttheme: ThemeDefinition = {
   dark: false,
   variables: {
-    "high-emphasis-opacity": 1,
+    "high-emphasis-opacity": 0.92,
+    "medium-emphasis-opacity": 0.62,
   },
   colors: {
-    background: "#f2f5f8",
+    background: "#f7f8fa",
     surface: "#ffffff",
-    primary: "#344767",
-    secondary: "#334155",
-    accent: "#705CF6",
-    error: "#ef476f",
-    info: "#2196F3",
-    success: "#06d6a0",
+    "surface-variant": "#eef1f4",
+    primary: "#0f766e",
+    secondary: "#1f2933",
+    accent: "#f2622e",
+    error: "#dc3545",
+    info: "#2563eb",
+    success: "#16a34a",
     "on-success": "#ffffff",
-    warning: "#ffd166",
+    warning: "#f59e0b",
   },
 };
 
 const Darktheme: ThemeDefinition = {
   dark: true,
+  variables: {
+    "high-emphasis-opacity": 0.92,
+    "medium-emphasis-opacity": 0.64,
+  },
   colors: {
-    background: "#111b27",
-    surface: "#1E293B",
-    primary: "#705CF6",
-    secondary: "#598EF3",
-    accent: "#705CF6",
-    error: "#FF5252",
-    info: "#2196F3",
-    success: "#4CAF50",
-    warning: "#FFC107",
+    background: "#0f1419",
+    surface: "#171d24",
+    "surface-variant": "#222a33",
+    primary: "#2dd4bf",
+    "on-primary": "#062a26",
+    secondary: "#cbd5e1",
+    accent: "#ff8a5c",
+    error: "#f87171",
+    info: "#60a5fa",
+    success: "#4ade80",
+    warning: "#fbbf24",
   },
 };
 
@@ -62,7 +70,7 @@ export default createVuetify({
   },
   directives,
   theme: {
-    defaultTheme: 'dark',
+    defaultTheme: 'light',
     themes: {
       light: Lighttheme,
       dark: Darktheme,
@@ -70,27 +78,33 @@ export default createVuetify({
   },
   defaults: {
     VBtn: {
-      rounded: "md",
-      fontWeight: "400",
+      rounded: "lg",
+      fontWeight: "500",
       letterSpacing: "0",
     },
-    VCard: {},
+    VCard: {
+      rounded: "lg",
+    },
     VSheet: {
-      elevation: 1,
+      elevation: 0,
     },
     VTable: {
-      elevation: 1,
+      elevation: 0,
     },
-
+    VChip: {
+      rounded: "md",
+    },
     VDataTable: {
       fixedHeader: true,
-      noDataText: "Results not found",
+      noDataText: "暂无数据",
     },
     VTextField: {
-      variant: "solo",
+      variant: "outlined",
+      rounded: "lg",
     },
     VSelect: {
-      variant: "solo",
+      variant: "outlined",
+      rounded: "lg",
     },
   },
  // 2. 添加 locale 配置块

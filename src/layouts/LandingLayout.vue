@@ -27,7 +27,7 @@ const customizeTheme = useCustomizeThemeStore();
     }"
   >
     <!-- <GlobalLoading /> -->
-    <div class="flex-fill">
+    <div class="flex-fill page-shell">
       <slot></slot>
     </div>
   </v-main>
@@ -41,7 +41,7 @@ const customizeTheme = useCustomizeThemeStore();
   height: 100%;
   display: flex;
   flex-direction: column;
-  width: 80%;
+  width: 100%;
   /* 使用 margin: auto 来使其在 v-main 内居中 */
   margin-left: auto !important;  
   margin-right: auto !important;

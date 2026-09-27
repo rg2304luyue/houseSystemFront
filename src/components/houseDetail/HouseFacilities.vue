@@ -1,21 +1,24 @@
 <template>
-  <v-card flat class="amenities-vuetify-card">
-    <v-card-title class="text-subtitle-1 font-weight-medium text-blue-grey-darken-1 px-4 pt-3 pb-1">
-      配套设施
-    </v-card-title>
-    <v-card-text class="px-4 pb-3 pt-2">
-      <div v-if="availableAmenities.length > 0" class="d-flex flex-wrap" style="gap: 16px;">
+  <v-card flat class="amenities-card h-100">
+    <div class="px-5 pt-5 pb-2">
+      <h2 class="house-section-title">配套设施</h2>
+    </div>
+    <v-card-text class="px-5 pb-5 pt-2">
+      <div v-if="availableAmenities.length > 0" class="amenity-grid">
         <div
           v-for="amenity in availableAmenities"
           :key="amenity.key"
-          class="d-flex flex-column align-center text-center pa-1"
-          style="width: 75px;" >
-          <Icon :icon="amenity.icon" style="font-size: 28px;" class="text-grey-darken-1 mb-1" />
-          <span class="text-caption text-grey-darken-2">{{ amenity.label }}</span>
+          class="amenity-item"
+        >
+          <span class="amenity-icon">
+            <Icon :icon="amenity.icon" />
+          </span>
+          <span class="amenity-label">{{ amenity.label }}</span>
         </div>
       </div>
-      <div v-else class="text-center text-caption text-grey-darken-1 py-3">
-        暂无设施信息
+      <div v-else class="house-empty py-8">
+        <v-icon>mdi-sofa-outline</v-icon>
+        <span>暂无设施信息</span>
       </div>
     </v-card-text>
   </v-card>
@@ -70,3 +73,29 @@ const availableAmenities: ComputedRef<AmenityInfo[]> = computed(() => {
   return allAmenities.value.filter(amenity => props.facilities[amenity.key] === true);
 });
 </script>
+
+<style scoped>
+.amenity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 12px; }
+.amenity-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 4px;
+  border: 1px solid var(--house-line);
+  border-radius: 10px;
+  text-align: center;
+}
+.amenity-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--house-soft);
+  color: rgb(var(--v-theme-primary));
+  font-size: 24px;
+}
+.amenity-label { font-size: .8125rem; color: var(--house-ink); }
+</style>

@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import apiClient from "@/api/client";
-import { useRouter } from "vue-router";
 import { useProfileStore } from "@/stores/profileStore";
-import { ref, computed, reactive, onMounted } from "vue";
+import { ref, computed, reactive, onMounted, watch } from "vue";
 
 interface HouseItem {
   id: number;
@@ -23,26 +22,25 @@ interface HouseItem {
   region: string;
   rent_type: string;
   rooms: string;
-  status: number;
+  ownership_status: 'pending' | 'verified' | 'rejected';
   subway: number;
   tag_new: number;
 }
 
-const router = useRouter();
 const profileStore = useProfileStore();
 
 const loading = ref(false);
 const houses = ref<HouseItem[]>([]);
 const currentPage = ref(1);
-const totalPages = ref(1);
+const perPage = 10;
 const searchQuery = ref("");
 
 const landlordName = computed(() => profileStore.user?.name || "");
 
-const statusMap: Record<number, { text: string; color: string }> = {
-  0: { text: "空置", color: "grey" },
-  1: { text: "出租中", color: "green" },
-  2: { text: "维修中", color: "orange" },
+const statusMap = {
+  pending: { text: "待核验", color: "warning" },
+  verified: { text: "已核验", color: "success" },
+  rejected: { text: "核验未通过", color: "error" },
 };
 
 const snackbar = reactive({
@@ -66,7 +64,6 @@ const fetchHouses = async () => {
   try {
     const response = await apiClient.get("/houses/landlord/me");
     houses.value = extractDataArray(response);
-    totalPages.value = 1;
   } catch (error) {
     console.error("获取房源列表失败:", error);
     snackbar.show = true;
@@ -94,11 +91,15 @@ const toggleAvailability = async (house: HouseItem) => {
 };
 
 const goToEdit = (houseId: number) => {
-  router.push(`/houses/${houseId}/edit`);
+  snackbar.show = true;
+  snackbar.message = `房源 ${houseId} 的编辑功能尚未开放`;
+  snackbar.color = "info";
 };
 
 const goToCreate = () => {
-  router.push("/houses/new");
+  snackbar.show = true;
+  snackbar.message = "新增房源功能尚未开放";
+  snackbar.color = "info";
 };
 
 const formatPrice = (price: number) => {
@@ -129,12 +130,22 @@ const filteredHouses = computed(() => {
   );
 });
 
+const pagedHouses = computed(() => {
+  const start = (currentPage.value - 1) * perPage;
+  return filteredHouses.value.slice(start, start + perPage);
+});
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredHouses.value.length / perPage)));
+watch(searchQuery, () => { currentPage.value = 1; });
+watch(totalPages, (pages) => { currentPage.value = Math.min(currentPage.value, pages); });
+const listingStatus = (house: HouseItem) => statusMap[house.ownership_status] || statusMap.pending;
+
 const statistics = computed(() => {
   const total = houses.value.length;
   const available = houses.value.filter((h) => h.available === 1).length;
   const unavailable = total - available;
   const totalViews = houses.value.reduce(
-    (sum, h) => sum + (h.page_views || 0),
+    (sum, h) => sum + (Number(h.page_views) || 0),
     0
   );
   return { total, available, unavailable, totalViews };
@@ -173,276 +184,173 @@ onMounted(() => {
 </script>
 
 <template>
-  <v-container>
-    <v-row>
-      <v-col cols="12">
-        <!-- Header with statistics -->
-        <v-card class="mb-5" elevation="2">
-          <v-card-text>
-            <v-row align="center">
-              <v-col cols="12" md="6">
-                <h1 class="text-h4 font-weight-bold">
-                  <v-icon class="mr-2" size="large">mdi-home-group</v-icon>
-                  我的房源
-                </h1>
-                <p class="text-subtitle-1 text-grey mt-1">
-                  管理您发布的所有房源信息
-                </p>
-              </v-col>
-              <v-col cols="12" md="6">
-                <v-row dense>
-                  <v-col cols="6" sm="3">
-                    <div class="text-center">
-                      <div class="text-h5 font-weight-bold primary--text">
-                        {{ statistics.total }}
-                      </div>
-                      <div class="text-caption">总房源</div>
-                    </div>
-                  </v-col>
-                  <v-col cols="6" sm="3">
-                    <div class="text-center">
-                      <div class="text-h5 font-weight-bold success--text">
-                        {{ statistics.available }}
-                      </div>
-                      <div class="text-caption">已上架</div>
-                    </div>
-                  </v-col>
-                  <v-col cols="6" sm="3">
-                    <div class="text-center">
-                      <div class="text-h5 font-weight-bold error--text">
-                        {{ statistics.unavailable }}
-                      </div>
-                      <div class="text-caption">已下架</div>
-                    </div>
-                  </v-col>
-                  <v-col cols="6" sm="3">
-                    <div class="text-center">
-                      <div class="text-h5 font-weight-bold info--text">
-                        {{ statistics.totalViews }}
-                      </div>
-                      <div class="text-caption">总浏览</div>
-                    </div>
-                  </v-col>
-                </v-row>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
+  <section class="listings-page">
+    <!-- 标题 -->
+    <div class="d-flex align-center flex-wrap ga-4 mb-5">
+      <div class="flex-fill">
+        <h2 class="house-section-title">我的房源</h2>
+        <p class="house-muted text-body-2 mb-0">管理您发布的所有房源信息</p>
+      </div>
+      <v-btn color="primary" variant="flat" prepend-icon="mdi-plus" @click="goToCreate">发布新房源</v-btn>
+    </div>
 
-        <!-- Main list card -->
-        <v-card class="mx-auto" elevation="2">
-          <v-toolbar color="primary" dark>
-            <v-toolbar-title>房源列表</v-toolbar-title>
-            <v-spacer></v-spacer>
-            <v-text-field
-              v-model="searchQuery"
-              hide-details
-              prepend-inner-icon="mdi-magnify"
-              placeholder="搜索房源..."
-              single-line
-              variant="solo"
-              density="compact"
-              clearable
-              class="mr-2"
-              style="max-width: 300px"
-            ></v-text-field>
-            <v-btn
-              icon="mdi-refresh"
-              @click="fetchHouses"
-              :loading="loading"
-            ></v-btn>
-            <v-btn icon="mdi-plus" @click="goToCreate"></v-btn>
-          </v-toolbar>
-
-          <v-list select-strategy="leaf">
-            <template v-if="loading">
-              <v-skeleton-loader
-                v-for="i in 3"
-                :key="i"
-                type="list-item-three-line"
-                class="mx-auto"
-              ></v-skeleton-loader>
-            </template>
-
-            <template v-else-if="filteredHouses.length === 0">
-              <v-list-item>
-                <div class="text-center py-10 w-100">
-                  <v-icon size="64" color="grey">mdi-home-off</v-icon>
-                  <p class="text-h6 text-grey mt-3">暂无房源数据</p>
-                  <v-btn
-                    color="primary"
-                    class="mt-3"
-                    @click="goToCreate"
-                  >
-                    <v-icon left>mdi-plus</v-icon>
-                    发布新房源
-                  </v-btn>
-                </div>
-              </v-list-item>
-            </template>
-
-            <template v-else>
-              <v-list-item
-                v-for="house in filteredHouses"
-                :key="house.id"
-                class="py-4 house-list-item"
-              >
-                <template v-slot:prepend>
-                  <v-img
-                    :src="
-                      house.image_url ||
-                      'https://via.placeholder.com/120x90?text=暂无图片'
-                    "
-                    width="120"
-                    height="90"
-                    cover
-                    class="rounded mr-4"
-                    @click="goToEdit(house.id)"
-                    style="cursor: pointer"
-                  ></v-img>
-                </template>
-
-                <v-list-item-title class="text-h6 mb-1">
-                  <span
-                    style="cursor: pointer"
-                    @click="goToEdit(house.id)"
-                  >{{ house.title }}</span>
-                  <v-chip
-                    v-if="house.tag_new === 1"
-                    size="x-small"
-                    color="error"
-                    class="ml-2"
-                  >
-                    新
-                  </v-chip>
-                  <v-chip
-                    v-if="house.subway === 1"
-                    size="x-small"
-                    color="info"
-                    class="ml-1"
-                  >
-                    近地铁
-                  </v-chip>
-                </v-list-item-title>
-
-                <v-list-item-subtitle
-                  class="mb-1 text-high-emphasis opacity-100"
-                >
-                  <v-icon size="small">mdi-map-marker</v-icon>
-                  {{ house.region }}区 · {{ house.block }} ·
-                  {{ house.community }}
-                  <span class="mx-2">|</span>
-                  <v-icon size="small">mdi-home-variant</v-icon>
-                  {{ house.rooms }} · {{ house.area }}㎡ ·
-                  {{ house.direction }}向
-                </v-list-item-subtitle>
-
-                <v-list-item-subtitle class="text-high-emphasis">
-                  <span class="text-h6 font-weight-bold error--text">
-                    ¥{{ formatPrice(house.price) }}
-                  </span>
-                  <span class="text-caption ml-1">/月</span>
-                  <span class="mx-2">|</span>
-                  {{ house.rent_type }} · {{ house.decoration }}
-                </v-list-item-subtitle>
-
-                <template v-slot:append>
-                  <v-list-item-action class="flex-column align-end">
-                    <small class="mb-2 text-high-emphasis opacity-60">
-                      发布于 {{ formatPublishTime(house.publish_time) }}
-                    </small>
-                    <div class="d-flex align-center">
-                      <v-chip variant="outlined" class="mr-2" rounded="sm">
-                        <v-icon size="small" start>mdi-eye</v-icon>
-                        {{ house.page_views || 0 }}
-                      </v-chip>
-                      <v-chip
-                        :color="
-                          house.available === 1 ? 'success' : 'error'
-                        "
-                        variant="elevated"
-                        @click.stop="toggleAvailability(house)"
-                        rounded="sm"
-                      >
-                        <v-icon start>
-                          {{
-                            house.available === 1
-                              ? "mdi-check-circle"
-                              : "mdi-close-circle"
-                          }}
-                        </v-icon>
-                        {{ house.available === 1 ? "已上架" : "已下架" }}
-                      </v-chip>
-                      <v-chip
-                        :color="statusMap[house.status]?.color || 'grey'"
-                        variant="elevated"
-                        class="ml-1"
-                        rounded="sm"
-                      >
-                        {{ statusMap[house.status]?.text || "未知" }}
-                      </v-chip>
-                      <v-btn
-                        icon
-                        size="small"
-                        variant="text"
-                        color="primary"
-                        class="ml-1"
-                        @click.stop="goToEdit(house.id)"
-                        title="编辑"
-                      >
-                        <v-icon>mdi-pencil</v-icon>
-                      </v-btn>
-                      <v-btn
-                        icon
-                        size="small"
-                        variant="text"
-                        color="error"
-                        class="ml-1"
-                        @click.stop="confirmDelete(house)"
-                        title="删除"
-                      >
-                        <v-icon>mdi-delete</v-icon>
-                      </v-btn>
-                    </div>
-                  </v-list-item-action>
-                </template>
-              </v-list-item>
-            </template>
-          </v-list>
-
-          <v-divider></v-divider>
-          <v-card-actions
-            v-if="totalPages > 1"
-            class="justify-center"
-          >
-            <v-pagination
-              v-model="currentPage"
-              :length="totalPages"
-              :total-visible="7"
-              density="comfortable"
-              @update:model-value="fetchHouses"
-            ></v-pagination>
-          </v-card-actions>
+    <!-- 统计 -->
+    <v-row class="mb-4" dense>
+      <v-col v-for="stat in [
+        { label: '总房源', value: statistics.total },
+        { label: '已上架', value: statistics.available },
+        { label: '已下架', value: statistics.unavailable },
+        { label: '总浏览', value: statistics.totalViews },
+      ]" :key="stat.label" cols="6" md="3">
+        <v-card class="stat-card pa-4" elevation="0">
+          <div class="stat-value">{{ stat.value }}</div>
+          <div class="house-muted text-body-2">{{ stat.label }}</div>
         </v-card>
       </v-col>
     </v-row>
 
-    <!-- Delete confirmation dialog -->
+    <!-- 工具栏 -->
+    <div class="d-flex align-center flex-wrap ga-3 mb-4">
+      <h3 class="list-heading flex-fill">房源列表</h3>
+      <v-text-field
+        v-model="searchQuery"
+        hide-details
+        prepend-inner-icon="mdi-magnify"
+        placeholder="搜索房源..."
+        single-line
+        density="compact"
+        clearable
+        class="listings-search"
+      ></v-text-field>
+      <v-btn
+        icon="mdi-refresh"
+        variant="tonal"
+        color="primary"
+        size="small"
+        title="刷新"
+        @click="fetchHouses"
+        :loading="loading"
+      ></v-btn>
+    </div>
+
+    <!-- 列表 -->
+    <template v-if="loading">
+      <v-card v-for="i in 3" :key="i" class="mb-3" elevation="0">
+        <v-skeleton-loader type="list-item-avatar-three-line"></v-skeleton-loader>
+      </v-card>
+    </template>
+
+    <v-card v-else-if="filteredHouses.length === 0" elevation="0">
+      <div class="house-empty">
+        <v-icon>mdi-home-off-outline</v-icon>
+        <div>{{ searchQuery ? "没有找到符合条件的房源" : "暂无房源数据" }}</div>
+        <v-btn color="primary" variant="tonal" class="mt-2" prepend-icon="mdi-plus" @click="goToCreate">
+          发布新房源
+        </v-btn>
+      </div>
+    </v-card>
+
+    <template v-else>
+      <v-card
+        v-for="house in pagedHouses"
+        :key="house.id"
+        class="listing-card house-hover-lift mb-3 pa-4"
+        elevation="0"
+      >
+        <div class="listing-row">
+          <div class="listing-thumb" style="cursor: pointer" @click="goToEdit(house.id)">
+            <v-img v-if="house.image_url" :src="house.image_url" cover height="100%" alt="房源图片">
+              <template #error>
+                <div class="thumb-fallback"><v-icon size="32" color="primary">mdi-home-outline</v-icon></div>
+              </template>
+            </v-img>
+            <div v-else class="thumb-fallback"><v-icon size="32" color="primary">mdi-home-outline</v-icon></div>
+          </div>
+
+          <div class="listing-info">
+            <div class="d-flex align-center flex-wrap ga-2 mb-1">
+              <h3 class="listing-title" style="cursor: pointer" @click="goToEdit(house.id)">{{ house.title }}</h3>
+              <v-chip v-if="house.tag_new === 1" size="x-small" color="warning" variant="tonal">新</v-chip>
+              <v-chip v-if="house.subway === 1" size="x-small" color="info" variant="tonal">近地铁</v-chip>
+            </div>
+            <div class="house-muted text-body-2 mb-1">
+              <v-icon size="14" class="mr-1">mdi-map-marker-outline</v-icon>{{ house.region }}区 · {{ house.block }} · {{ house.community }}
+            </div>
+            <div class="house-muted text-body-2 mb-2">
+              {{ house.rooms }} · {{ house.area }}㎡ · {{ house.direction }}向 · {{ house.rent_type }} · {{ house.decoration }}
+            </div>
+            <div class="d-flex align-center flex-wrap ga-2">
+              <v-chip
+                :color="house.available === 1 ? 'success' : 'error'"
+                size="small"
+                variant="tonal"
+                :prepend-icon="house.available === 1 ? 'mdi-check-circle-outline' : 'mdi-close-circle-outline'"
+                title="点击切换上/下架"
+                @click.stop="toggleAvailability(house)"
+              >
+                {{ house.available === 1 ? "已上架" : "已下架" }}
+              </v-chip>
+              <v-chip :color="listingStatus(house).color" size="small" variant="tonal">
+                {{ listingStatus(house).text }}
+              </v-chip>
+              <span class="house-muted text-caption">
+                <v-icon size="14">mdi-eye-outline</v-icon> {{ house.page_views || 0 }}
+                <span class="mx-1">·</span>发布于 {{ formatPublishTime(house.publish_time) }}
+              </span>
+            </div>
+          </div>
+
+          <div class="listing-side">
+            <div class="house-price text-h6">¥{{ formatPrice(house.price) }}<small>/月</small></div>
+            <div class="d-flex ga-1">
+              <v-btn
+                icon="mdi-pencil-outline"
+                size="small"
+                variant="text"
+                color="primary"
+                @click.stop="goToEdit(house.id)"
+                title="编辑"
+              ></v-btn>
+              <v-btn
+                icon="mdi-delete-outline"
+                size="small"
+                variant="text"
+                color="error"
+                @click.stop="confirmDelete(house)"
+                title="删除"
+              ></v-btn>
+            </div>
+          </div>
+        </div>
+      </v-card>
+    </template>
+
+    <div v-if="totalPages > 1" class="d-flex justify-center mt-4">
+      <v-pagination
+        v-model="currentPage"
+        :length="totalPages"
+        :total-visible="7"
+        density="comfortable"
+        @update:model-value="currentPage = $event"
+      ></v-pagination>
+    </div>
+
+    <!-- 删除确认 -->
     <v-dialog v-model="deleteDialog" max-width="400">
       <v-card>
-        <v-card-title class="text-h6">
-          <v-icon class="mr-2" color="error">mdi-alert</v-icon>
-          确认删除
+        <v-card-title class="d-flex align-center pa-5 pb-2">
+          <v-icon class="mr-2" color="error">mdi-alert-outline</v-icon>
+          <span class="font-weight-bold">确认删除</span>
         </v-card-title>
-        <v-card-text>
+        <v-card-text class="px-5">
           确定要删除房源
           <strong>{{ selectedHouse?.title }}</strong>
           吗？此操作不可撤销。
         </v-card-text>
-        <v-card-actions>
+        <v-card-actions class="pa-5 pt-0">
           <v-spacer></v-spacer>
-          <v-btn variant="text" @click="deleteDialog = false">取消</v-btn>
-          <v-btn color="error" variant="elevated" @click="doDelete">
+          <v-btn variant="outlined" @click="deleteDialog = false">取消</v-btn>
+          <v-btn color="error" variant="flat" @click="doDelete">
             确认删除
           </v-btn>
         </v-card-actions>
@@ -453,16 +361,32 @@ onMounted(() => {
     <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
       {{ snackbar.message }}
     </v-snackbar>
-  </v-container>
+  </section>
 </template>
 
 <style scoped lang="scss">
-.house-list-item {
-  transition: all 0.3s ease;
+.stat-card { background: var(--house-surface); }
+.stat-value { color: var(--house-ink); font-size: 1.75rem; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.list-heading { color: var(--house-ink); font-size: 1.05rem; font-weight: 700; }
+.listings-search { max-width: 300px; min-width: 200px; }
+.listing-row { display: flex; align-items: center; gap: 16px; }
+.listing-thumb {
+  flex: 0 0 132px;
+  width: 132px;
+  height: 99px;
+  border-radius: var(--house-radius);
+  overflow: hidden;
+  background: var(--house-soft);
+}
+.thumb-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--house-soft); }
+.listing-info { flex: 1 1 auto; min-width: 0; }
+.listing-title { color: var(--house-ink); font-size: 1.05rem; font-weight: 700; }
+.listing-side { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 
-  &:hover {
-    background-color: rgba(76, 175, 80, 0.08);
-    transform: translateX(4px);
-  }
+@media (max-width: 600px) {
+  .listings-search { max-width: none; width: calc(100% - 52px); }
+  .listing-row { flex-wrap: wrap; align-items: flex-start; }
+  .listing-thumb { flex-basis: 100%; width: 100%; height: 160px; }
+  .listing-side { width: 100%; flex-direction: row; align-items: center; justify-content: space-between; }
 }
 </style>

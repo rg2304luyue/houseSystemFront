@@ -1,3 +1,4 @@
+<!-- 【未使用】无任何引用，可在确认后删除。 -->
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import apiClient from "@/api/client";

@@ -45,9 +45,13 @@ const currentLayout = computed(() => {
   }
   return layouts[layoutName];
 });
-onMounted(() => {
-  theme.global.name.value = customizeTheme.darkTheme ? 'dark' : 'light';
-});
+watch(
+  () => customizeTheme.darkTheme,
+  (dark) => {
+    theme.global.name.value = dark ? "dark" : "light";
+  },
+  { immediate: true },
+);
 </script>
 
 <style scoped>

@@ -16,8 +16,8 @@ onMounted(() => {
 <template>
   <v-navigation-drawer v-model="customizeTheme.mainSidebar" border="none" elevation="0" temporary id="mainMenu">
     <template v-if="!customizeTheme.miniSidebar" #prepend>
-      <div class="brand pa-6">
-        <img src="@/assets/logo-house.svg" alt="好客租房" width="26" height="26" />
+      <div class="brand pa-5">
+        <span class="brand-mark"><img src="@/assets/logo-house.svg" alt="好客租房" width="18" height="18" /></span>
         <div><strong>好客租房</strong><span>让找房更笃定</span></div>
       </div>
     </template>
@@ -26,8 +26,16 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.brand { display: flex; align-items: center; gap: 12px; color: #f4f7fb; }
-.brand img { filter: brightness(0) invert(1); }
-.brand strong { display: block; font-size: 1.2rem; letter-spacing: .08em; }
-.brand span { display: block; margin-top: 3px; font-size: .75rem; opacity: .72; }
+.brand { display: flex; align-items: center; gap: 12px; color: var(--house-ink); }
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgb(var(--v-theme-primary));
+}
+.brand-mark img { filter: brightness(0) invert(1); }
+.brand strong { display: block; font-size: 1.1rem; letter-spacing: .04em; }
+.brand span { display: block; margin-top: 2px; font-size: .75rem; color: var(--house-muted); }
 </style>

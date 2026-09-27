@@ -16,10 +16,11 @@ interface RentalProperty {
   purpose: string;
   startDate: string;
   endDate: string;
-  status: 'active' | 'expired' | 'upcoming';
+  status: 'active' | 'expired' | 'upcoming' | 'unknown';
   landlord_username: string;
   rentValue: string;
   landlordPhone: string;
+  isLegacy: boolean;
 }
 
 // 获取当前用户
@@ -34,6 +35,10 @@ const rentalProperties = ref<RentalProperty[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
 
+const localDay = (value: Date): number => (
+  value.getFullYear() * 10000 + (value.getMonth() + 1) * 100 + value.getDate()
+);
+
 // 从后端获取房源数据
 const fetchRentalProperties = async () => {
   loading.value = true;
@@ -42,31 +47,35 @@ const fetchRentalProperties = async () => {
     const response = await apiClient.get(`/leases/mine`);
     const records = Array.isArray(response.data) ? response.data : [];
     rentalProperties.value = records
-      .filter((record: any) => record.contract && record.house)
       .map((record: any) => {
-        const property = { ...record.house, ...record.contract };
+        const house = record.house || {};
+        const property = { ...record, ...house, ...(record.contract || {}) };
         const currentDate = new Date();
-        const startDate = new Date(property.startDate);
-        const endDate = new Date(property.endDate);
+        const startDate = property.startDate ? new Date(property.startDate) : null;
+        const endDate = property.endDate ? new Date(property.endDate) : null;
         
-        let status: 'active' | 'expired' | 'upcoming' = 'active';
-        if (currentDate > endDate) {
+        let status: 'active' | 'expired' | 'upcoming' | 'unknown' = 'unknown';
+        if (startDate && endDate && !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())) {
+          status = 'active';
+        }
+        if (endDate && !Number.isNaN(endDate.getTime()) && localDay(currentDate) > localDay(endDate)) {
           status = 'expired';
-        } else if (currentDate < startDate) {
+        } else if (startDate && !Number.isNaN(startDate.getTime()) && localDay(currentDate) < localDay(startDate)) {
           status = 'upcoming';
         }
         
         return {
-          id: record.house.id,
-          title: record.house.title,
-          region: record.house.region,
-          purpose: property.purpose,
-          startDate: property.startDate,
-          endDate: property.endDate,
+          id: record.id,
+          title: house.title || property.houseTitle || `房源 ${record.house_id}（资料暂不可用）`,
+          region: house.region || property.region || '',
+          purpose: property.purpose || '历史数据未记录',
+          startDate: property.startDate || '历史数据未记录',
+          endDate: property.endDate || '历史数据未记录',
           status: status,
-          landlord_username: property.landlordName,
-          rentValue: property.rentValue,
-          landlordPhone: property.landlordPhone
+          landlord_username: property.landlordName || record.landlord_username || '历史数据未记录',
+          rentValue: property.rentValue ?? house.price ?? '历史数据未记录',
+          landlordPhone: property.landlordPhone || '历史数据未记录',
+          isLegacy: !record.contract
         };
       });
   } catch (err: unknown) {
@@ -105,6 +114,8 @@ const getStatusColor = (status: string) => {
       return 'error';
     case 'upcoming':
       return 'warning';
+    case 'unknown':
+      return 'info';
     default:
       return 'info';
   }
@@ -113,133 +124,116 @@ const getStatusColor = (status: string) => {
 </script>
 
 <template>
-  <v-card height="100%">
+  <section class="rent-page">
     <!-- 标题和搜索框 -->
-    <v-card-title class="d-flex align-center">
-      <span class="text-h5">{{ currentUser }}的租房列表</span>
-      <v-spacer></v-spacer>
+    <div class="d-flex align-center flex-wrap ga-4 mb-5">
+      <div class="flex-fill">
+        <h2 class="house-section-title">{{ currentUser }}的租约</h2>
+        <p class="house-muted text-body-2 mb-0">共 {{ rentalProperties.length }} 份租约记录</p>
+      </div>
       <v-text-field
+        v-model="searchKey"
         clearable
-        variant="solo"
-        class="elevation-1"
         hide-details
+        density="comfortable"
         prepend-inner-icon="mdi-magnify"
         placeholder="搜索房源/房东/电话"
-        v-model="searchKey"
-        style="max-width: 300px;"
+        class="rent-search"
       ></v-text-field>
-    </v-card-title>
+    </div>
 
     <!-- 加载状态 -->
-    <v-progress-linear
-      v-if="loading"
-      indeterminate
-      color="primary"
-    ></v-progress-linear>
+    <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4"></v-progress-linear>
 
     <!-- 错误提示 -->
-    <v-alert
-      v-if="error"
-      type="error"
-      variant="tonal"
-      class="ma-3"
-    >
+    <v-alert v-if="error" type="error" variant="tonal" class="mb-4">
       {{ error }}
     </v-alert>
 
-    <!-- 房源列表 -->
-    <perfect-scrollbar class="property-list">
-      <transition-group name="fade">
-        <v-card
-          v-for="property in filteredProperties"
-          :key="property.id"
-          class="ma-3"
-          elevation="2"
-        >
-          <div class="property-item d-flex align-start pa-4">
-            <!-- 房源图片占位 -->
-            <v-avatar size="120" rounded="lg" class="mr-4">
-              <v-img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60" alt="房源图片" />
-            </v-avatar>
-            
-            <!-- 房源信息 -->
-            <div class="flex-fill">
-              <div class="d-flex align-center mb-2">
-                <h3 class="text-h6">{{ property.title }}</h3>
-                <v-chip :color="getStatusColor(property.status)" size="small" class="ml-2">
-                  {{ 
-                    property.status === 'active' ? '租赁中' : 
-                    property.status === 'expired' ? '已到期' : '即将入住'
-                  }}
-                </v-chip>
-              </div>
-              
-              <div class="text-body-1 mb-2">
-                <v-icon small class="mr-1">mdi-map-marker</v-icon>
-                {{ property.region || '未知区域' }}
-              </div>
-
-              <!-- 房东信息 -->
-              <div class="text-body-1 mb-2">
-                <v-icon small class="mr-1">mdi-account</v-icon>
-                房东: {{ property.landlord_username }}
-              </div>
-              
-              <div class="text-body-1 mb-2">
-                <v-icon small class="mr-1">mdi-phone</v-icon>
-                房东电话: {{ property.landlordPhone }}
-              </div>
-              
-              <div class="text-body-1 mb-2">
-                <v-icon small class="mr-1">mdi-home</v-icon>
-                用途: {{ property.purpose }}
-              </div>
-              
-              <div class="text-body-1 mb-2">
-                <v-icon small class="mr-1">mdi-cash</v-icon>
-                租金: {{ property.rentValue }} 元/月
-              </div>
-              
-              <div class="d-flex align-center mb-2">
-                <div class="mr-4">
-                  <span class="text-caption">起租:</span> {{ property.startDate }}
-                </div>
-                <div>
-                  <span class="text-caption">到期:</span> {{ property.endDate }}
-                </div>
-              </div>
-            </div>
-            
-          </div>
-        </v-card>
-      </transition-group>
-      
-      <!-- 无房源提示 -->
-      <v-alert
-        v-if="!loading && filteredProperties.length === 0"
-        type="info"
-        variant="tonal"
-        class="ma-3"
+    <!-- 租约列表 -->
+    <transition-group name="fade" tag="div">
+      <v-card
+        v-for="property in filteredProperties"
+        :key="property.id"
+        class="rent-card house-hover-lift mb-3 pa-4"
+        elevation="0"
       >
-        没有找到符合条件的房源
-      </v-alert>
-    </perfect-scrollbar>
-  </v-card>
+        <div class="rent-row">
+          <!-- 房源图片占位（租约数据未包含房源图片） -->
+          <div class="rent-thumb">
+            <v-icon size="36" color="primary">mdi-home-outline</v-icon>
+          </div>
+
+          <!-- 房源信息 -->
+          <div class="rent-info">
+            <div class="d-flex align-center flex-wrap ga-2 mb-1">
+              <h3 class="rent-title">{{ property.title }}</h3>
+              <v-chip :color="getStatusColor(property.status)" size="small" variant="tonal">
+                {{
+                  property.status === 'active' ? '租赁中' :
+                  property.status === 'expired' ? '已到期' :
+                  property.status === 'upcoming' ? '即将入住' : '历史状态未知'
+                }}
+              </v-chip>
+              <v-chip v-if="property.isLegacy" color="info" size="small" variant="tonal">
+                历史记录
+              </v-chip>
+            </div>
+
+            <div class="house-muted text-body-2 mb-2">
+              <v-icon size="14" class="mr-1">mdi-map-marker-outline</v-icon>{{ property.region || '未知区域' }}
+              <span class="mx-2">·</span>用途：{{ property.purpose }}
+            </div>
+
+            <div class="rent-meta text-body-2">
+              <span><span class="house-muted">房东</span> {{ property.landlord_username }}</span>
+              <span><span class="house-muted">电话</span> {{ property.landlordPhone }}</span>
+              <span><span class="house-muted">起租</span> {{ property.startDate }}</span>
+              <span><span class="house-muted">到期</span> {{ property.endDate }}</span>
+            </div>
+          </div>
+
+          <div class="rent-side">
+            <div class="house-price text-h6">¥{{ property.rentValue }}<small>/月</small></div>
+          </div>
+        </div>
+      </v-card>
+    </transition-group>
+
+    <!-- 无租约提示 -->
+    <v-card v-if="!loading && filteredProperties.length === 0" elevation="0">
+      <div class="house-empty">
+        <v-icon>mdi-home-search-outline</v-icon>
+        <div>{{ searchKey ? '没有找到符合条件的租约' : '暂无租约记录' }}</div>
+        <v-btn v-if="!searchKey" color="primary" variant="tonal" class="mt-2" to="/houseList">去找房</v-btn>
+      </div>
+    </v-card>
+  </section>
 </template>
 
 <style scoped lang="scss">
-.property-list {
-  height: calc(100% - 72px);
-  padding-bottom: 16px;
+.rent-search { max-width: 320px; min-width: 220px; }
+.rent-row { display: flex; align-items: center; gap: 16px; }
+.rent-thumb {
+  flex: 0 0 96px;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--house-radius);
+  background: var(--house-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rent-info { flex: 1 1 auto; min-width: 0; }
+.rent-title { color: var(--house-ink); font-size: 1.05rem; font-weight: 700; }
+.rent-meta { display: flex; flex-wrap: wrap; gap: 4px 20px; color: var(--house-ink); }
+.rent-side { flex: 0 0 auto; text-align: right; }
 
-  .property-item {
-    transition: all 0.3s;
-
-    &:hover {
-      transition: all 0.3s;
-      background-color: rgba(99, 99, 99, 0.05);
-      cursor: pointer;
-    }
-  }
+@media (max-width: 600px) {
+  .rent-search { max-width: none; width: 100%; }
+  .rent-row { flex-wrap: wrap; align-items: flex-start; }
+  .rent-thumb { flex-basis: 64px; width: 64px; height: 64px; }
+  .rent-info { flex-basis: calc(100% - 80px); }
+  .rent-side { width: 100%; text-align: left; }
 }
 </style>

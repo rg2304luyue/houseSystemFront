@@ -32,7 +32,7 @@ const visibleMenu = computed(() =>
     <template v-for="menuArea in visibleMenu" :key="menuArea.key">
       <div
         v-if="!customizeTheme.miniSidebar && (menuArea.key || menuArea.text)"
-        class="pa-1 mt-2 text-overline"
+        class="px-5 pt-2 pb-1 text-caption house-muted"
       >
         {{ menuArea.text }}
       </div>
@@ -43,7 +43,6 @@ const visibleMenu = computed(() =>
             v-if="!menuItem.items && canAccess(menuItem)"
             :to="menuItem.link"
             :prepend-icon="menuItem.icon || 'mdi-circle-medium'"
-            :active-class="`active-nav-${customizeTheme.primaryColor.colorName}`"
             density="compact"
           >
             <v-list-item-title v-text="menuItem.text"></v-list-item-title>
@@ -80,39 +79,8 @@ const visibleMenu = computed(() =>
   padding-left: 8px !important;
 }
 
-.active-nav-grey {
-  border-left: 5px solid;
-  border-image-slice: 1;
-  border-image-source: linear-gradient(to bottom, #3a456c, #a4abbb);
-}
-
-.active-nav-purple {
-  border-left: 5px solid;
-  border-image-slice: 1;
-  border-image-source: linear-gradient(to bottom, #e82893, #954bcb);
-}
-
-.active-nav-info {
-  border-left: 5px solid;
-  border-image-slice: 1;
-  border-image-source: linear-gradient(to bottom, #487afa, #3fc7f3);
-}
-
-.active-nav-success {
-  border-left: 5px solid;
-  border-image-slice: 1;
-  border-image-source: linear-gradient(to bottom, #45b95b, #96dd4c);
-}
-
-.active-nav-warning {
-  border-left: 5px solid;
-  border-image-slice: 1;
-  border-image-source: linear-gradient(to bottom, #f0635d, #edc252);
-}
-
-.active-nav-error {
-  border-left: 5px solid;
-  border-image-slice: 1;
-  border-image-source: linear-gradient(to bottom, #ea373a, #f07285);
+.menu-list :deep(.v-list-item--active) {
+  color: rgb(var(--v-theme-primary));
+  font-weight: 600;
 }
 </style>

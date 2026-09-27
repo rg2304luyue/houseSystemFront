@@ -30,12 +30,11 @@ const customizeTheme = useCustomizeThemeStore();
   >
     <!-- <GlobalLoading /> -->
 
-    <div class="d-none d-sm-block px-3">
-      <PageTitle></PageTitle>
-      <Breadcrumb></Breadcrumb>
-    </div>
-
-    <div class="flex-fill">
+    <div class="flex-fill page-shell">
+      <div class="d-none d-sm-block mb-4">
+        <Breadcrumb></Breadcrumb>
+        <PageTitle></PageTitle>
+      </div>
       <slot></slot>
     </div>
   </v-main>

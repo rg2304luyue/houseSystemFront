@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router'
+import { ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router'
 import apiClient from '@/api/client'
+import { useSnackbarStore } from "@/stores/snackbarStore";
 
+const snackbarStore = useSnackbarStore();
 const router = useRouter()
 const route = useRoute()
 
@@ -12,297 +14,287 @@ const props = defineProps<{
   detail: any;
 }>();
 
-const form = ref({
-  house_num: '',
-  title: '整租·锦源小区 2室1厅 南',
-  region: '雨花',
-  block: '树木岭',
-  community: '锦源小区',
-  area: 80,
-  direction: '南',
-  rooms: '2室1厅1卫',
-  price: 3200,
-  rent_type: '整租',
-  decoration: '精装',
-  subway: 1,
-  available: 1,
-  tag_new: 1,
-  landlord: '张先生',
-  phone_num: '13888888888',
-  photos: [
-    'https://images.unsplash.com/photo-1506744038136-46273834b3fb',
-    'https://images.unsplash.com/photo-1494526585095-c41746248156',
-    'https://images.unsplash.com/photo-1470770841072-f978cf4d019e'
-  ],
-  videos: []
-});
-
 const currentSlide = ref(0);
-
-const mediaList = computed(() => {
-  return form.value.videos.length > 0 ? form.value.videos : form.value.photos;
-});
-
-function onBookVisit() {
-  alert('预约看房功能暂未实现');
-}
 
 const houseId = route.params.id
 
 const navigateToContract = () => {
+  if (!props.house.can_sign) return;
   router.push({
     path: '/contract',
-    query: { rent: props.house.price ,
-            landlord: props.house.landlord,
-            phone: props.house.phone_num,
-            houseid: houseId
-    }
+    query: { houseid: houseId }
   })
 }
 
 const navigateToChat = () => {
   router.push({
     path: '/chat',
-    query: { landlord: props.house.landlord,
-            phone: props.house.phone_num
-    }
+    query: { houseId: houseId }
   })
 }
 
 const showDatePicker = ref(false);
 const selectedDate = ref<Date | null>(null);
 
+const appointmentErrorMessage = (error: any): string => {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === 'string' && detail.trim()) return detail;
+  if (typeof error?.data?.message === 'string' && error.data.message.trim()) {
+    return error.data.message;
+  }
+  return '预约提交失败，请稍后重试';
+};
+
+const appointmentDateTime = (value: Date | string): Date => {
+  if (value instanceof Date) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 10, 0, 0);
+  }
+  const [year, month, day] = String(value).split('-').map(Number);
+  return new Date(year, month - 1, day, 10, 0, 0);
+};
+
 const onDateSelected = async (date: Date | null) => {
   if (!date) return;
   try {
+    const appointmentAt = appointmentDateTime(date as Date | string);
+    if (appointmentAt <= new Date()) {
+      appointmentAt.setTime(Date.now() + 60 * 60 * 1000);
+    }
     await apiClient.post('/appointments', {
-      time: date instanceof Date ? date.toISOString() : new Date(date).toISOString(),
-      property: props.house.title
+      time: appointmentAt.toISOString(),
+      house_id: Number(houseId)
     });
 
-    alert('预约日期提交成功！');
+    snackbarStore.showSuccessMessage('预约日期提交成功！');
     showDatePicker.value = false;
   } catch (error) {
     console.error('提交日期失败:', error);
-    alert('提交日期失败，请稍后重试');
+    snackbarStore.showErrorMessage(appointmentErrorMessage(error));
   }
 };
 
 </script>
 
 <template>
-  <v-card class="my-5 pa-5" rounded>
-    <v-row>
-      <!-- 左侧大图轮播 -->
-      <v-col cols="12" md="6">
-        <v-carousel
-          v-model="currentSlide"
-          height="400"
-          hide-delimiter-background
-          show-arrows="hover"
-        >
-          <v-carousel-item
-            v-for="(item, index) in detail.photos"
-            :key="index"
+  <v-card class="house-hero" flat>
+    <v-row no-gutters>
+      <!-- 左侧相册 -->
+      <v-col cols="12" md="7" class="pa-4">
+        <template v-if="detail.photos && detail.photos.length">
+          <v-carousel
+            v-model="currentSlide"
+            height="420"
+            hide-delimiter-background
+            show-arrows="hover"
+            class="hero-carousel"
           >
-            <img
-              :src="item"
-              style="width: 100%; height: 100%; object-fit: cover"
-            />
-          </v-carousel-item>
-        </v-carousel>
+            <v-carousel-item
+              v-for="(item, index) in detail.photos"
+              :key="index"
+            >
+              <img :src="item" class="hero-photo" alt="房源图片" />
+            </v-carousel-item>
+          </v-carousel>
 
-        <v-row class="mt-3" dense justify="center">
-      <v-col
-        v-for="(item, index) in detail.photos"
-        :key="'thumb-' + index"
-        cols="3"
-        class="d-flex justify-center"
-      >
-        <v-img
-          :src="item"
-          :class="currentSlide === index ? 'border border-primary' : ''"
-          style="cursor: pointer"
-          height="60"
-          width="100"
-          cover
-          @click="currentSlide = index"
-        />
+          <div class="hero-thumbs mt-3">
+            <button
+              v-for="(item, index) in detail.photos"
+              :key="'thumb-' + index"
+              type="button"
+              class="hero-thumb"
+              :class="{ 'hero-thumb--active': currentSlide === index }"
+              @click="currentSlide = index"
+            >
+              <v-img :src="item" :aspect-ratio="4 / 3" cover />
+            </button>
+          </div>
+        </template>
+        <div v-else class="house-empty hero-placeholder">
+          <v-icon>mdi-image-off-outline</v-icon>
+          <span>暂无房源图片</span>
+        </div>
+      </v-col>
+
+      <!-- 右侧标题价格与操作 -->
+      <v-col cols="12" md="5" class="pa-4 pa-md-6 d-flex flex-column">
+        <div class="d-flex flex-wrap ga-2 mb-3">
+          <v-chip color="primary" variant="tonal" size="small" label>{{ house.rent_type }}</v-chip>
+          <v-chip v-if="house.subway" color="info" variant="tonal" size="small" label>近地铁</v-chip>
+          <v-chip v-if="house.decoration" variant="tonal" size="small" label>{{ house.decoration }}</v-chip>
+          <v-chip :color="house.available ? 'success' : 'error'" variant="tonal" size="small" label>
+            {{ house.available ? '已上架' : '已下架' }}
+          </v-chip>
+        </div>
+
+        <h1 class="hero-title">{{ house.title }}</h1>
+        <div class="house-muted text-body-2 d-flex align-center mt-2">
+          <v-icon size="16" class="mr-1">mdi-map-marker-outline</v-icon>
+          {{ house.region }}区 · {{ house.block }}街道 · {{ house.community || '未填写' }}
+        </div>
+
+        <div class="hero-price-box my-5">
+          <span class="house-price hero-price">{{ house.price }}<small>元/月</small></span>
+        </div>
+
+        <div class="hero-facts">
+          <div class="hero-fact">
+            <div class="hero-fact__value">{{ house.rooms }}</div>
+            <div class="hero-fact__label">户型</div>
+          </div>
+          <div class="hero-fact">
+            <div class="hero-fact__value">{{ house.area }}㎡</div>
+            <div class="hero-fact__label">面积</div>
+          </div>
+          <div class="hero-fact">
+            <div class="hero-fact__value">{{ house.direction }}</div>
+            <div class="hero-fact__label">朝向</div>
+          </div>
+        </div>
+
+        <div class="hero-list mt-4">
+          <div class="hero-list__row">
+            <span class="house-muted">租赁方式</span><span>{{ house.rent_type }}</span>
+          </div>
+          <div class="hero-list__row">
+            <span class="house-muted">装修</span><span>{{ house.decoration }}</span>
+          </div>
+          <div class="hero-list__row">
+            <span class="house-muted">近地铁</span><span>{{ house.subway ? '是' : '否' }}</span>
+          </div>
+        </div>
+
+        <div class="hero-landlord mt-4">
+          <v-avatar color="primary" variant="tonal" size="40">
+            <v-icon>mdi-account</v-icon>
+          </v-avatar>
+          <div class="ml-3">
+            <div class="font-weight-bold">{{ house.landlord }}</div>
+            <div class="house-muted text-caption">房东 · {{ house.phone_num }}</div>
+          </div>
+        </div>
+
+        <v-spacer></v-spacer>
+
+        <!-- 主要操作按钮组 -->
+        <div class="action-buttons mt-5">
+          <v-btn
+            color="primary"
+            size="large"
+            variant="flat"
+            prepend-icon="mdi-calendar-clock"
+            @click="showDatePicker = !showDatePicker"
+            :disabled="!house.can_appoint"
+            class="action-btn"
+          >
+            预约看房
+          </v-btn>
+
+          <v-btn
+            color="primary"
+            size="large"
+            variant="flat"
+            prepend-icon="mdi-file-sign"
+            @click="navigateToContract"
+            :disabled="!house.can_sign"
+            class="action-btn"
+          >
+            立即签约
+          </v-btn>
+
+          <v-btn
+            v-if="house.landlord_id"
+            color="primary"
+            size="large"
+            variant="outlined"
+            prepend-icon="mdi-chat-processing-outline"
+            @click="navigateToChat"
+            class="action-btn"
+          >
+            咨询 AI
+          </v-btn>
+        </div>
+        <v-alert
+          v-if="!house.can_sign && house.unavailable_reason"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mt-3"
+        >
+          {{ house.unavailable_reason }}；如房源仍可预约，可先提交看房申请。
+        </v-alert>
       </v-col>
     </v-row>
 
-      </v-col>
-
-      <!-- 右侧信息区域 -->
-     <v-col cols="12" md="6" class="d-flex align-center">
-  <div style="width: 100%; max-width: 500px; margin: auto; line-height: 1.6;">
-    <h2 class="text-h4 font-weight-bold mb-5">{{ house.title }}</h2>
-
-    <div class="d-flex align-center mb-3">
-      <v-icon color="primary" class="mr-2">mdi-map-marker</v-icon>
-      <span>位置：{{ house.region }}区 · {{ house.block }}街道 · {{ form.community }}</span>
-    </div>
-
-    <div class="d-flex align-center mb-3">
-      <v-icon color="primary" class="mr-2">mdi-ruler-square</v-icon>
-      <span>面积：{{ house.area }}㎡</span>
-    </div>
-
-    <div class="d-flex align-center mb-3">
-      <v-icon color="primary" class="mr-2">mdi-compass-outline</v-icon>
-      <span>朝向：{{ house.direction }}</span>
-    </div>
-
-    <div class="d-flex align-center mb-3">
-      <v-icon color="primary" class="mr-2">mdi-home-floor-2</v-icon>
-      <span>户型：{{ house.rooms }}</span>
-    </div>
-
-    <div class="d-flex align-center mb-3" style="color: #d32f2f; font-weight: 600;">
-      <v-icon color="#d32f2f" class="mr-2">mdi-cash</v-icon>
-      <span>租金：{{ house.price }} 元/月</span>
-    </div>
-
-    <div class="d-flex align-center mb-3">
-      <v-icon color="primary" class="mr-2">mdi-file-document-outline</v-icon>
-      <span>租赁方式：{{ house.rent_type }}</span>
-    </div>
-
-    <div class="d-flex align-center mb-3">
-      <v-icon color="primary" class="mr-2">mdi-brush</v-icon>
-      <span>装修：{{ house.decoration }}</span>
-    </div>
-
-    <div class="d-flex align-center mb-3">
-      <v-icon color="primary" class="mr-2">mdi-subway-variant</v-icon>
-      <span>是否近地铁：{{ house.subway ? '是' : '否' }}</span>
-    </div>
-
-    <div class="d-flex align-center mb-3">
-      <v-icon color="primary" class="mr-2">mdi-eye-check</v-icon>
-      <span>是否随时看房：{{ house.available ? '是' : '否' }}</span>
-    </div>
-
-    <div class="d-flex align-center mb-3">
-      <v-icon color="primary" class="mr-2">mdi-account</v-icon>
-      <span>房东：{{ house.landlord }}（{{ house.phone_num }}）</span>
-    </div>
-
-    <!-- 主要操作按钮组 -->
-    <div class="action-buttons mt-4">
-      <v-btn
-        color="#4CAF50"
-        size="large"
-        variant="elevated"
-        prepend-icon="mdi-file-sign"
-        @click="navigateToContract"
-        class="action-btn"
-      >
-        立即签约
-      </v-btn>
-
-      <v-btn
-        color="#FF5722"
-        size="large"
-        variant="elevated"
-        prepend-icon="mdi-chat-processing"
-        @click="navigateToChat"
-        class="action-btn"
-      >
-        咨询房东
-      </v-btn>
-
-      <v-btn
-        color="#1976D2"
-        size="large"
-        variant="elevated"
-        prepend-icon="mdi-calendar-clock"
-        @click="showDatePicker = !showDatePicker"
-        class="action-btn"
-      >
-        预约看房
-      </v-btn>
-    </div>
-
-
-  <!-- 使用 Vuetify 全局浮层，确保整个页面的遮罩颜色和层级一致。 -->
-  <v-dialog v-model="showDatePicker" max-width="600" scrollable>
-    <v-card class="date-picker-card" elevation="10" rounded="lg">
-      <v-card-actions class="d-flex justify-end pa-0 ma-0">
-        <v-btn
-          icon="mdi-close"
-          variant="text"
-          size="small"
-          @click="showDatePicker = false"
-          class="ma-1"
-        ></v-btn>
-      </v-card-actions>
-      <v-date-picker
-        color="primary"
-        v-model="selectedDate"
-        @update:modelValue="onDateSelected"
-        class="pa-2"
-        width="100%"
-      ></v-date-picker>
-    </v-card>
-  </v-dialog>
-
-    <v-spacer></v-spacer>
-  </div>
-</v-col>
-
-    </v-row>
+    <!-- 使用 Vuetify 全局浮层，确保整个页面的遮罩颜色和层级一致。 -->
+    <v-dialog v-model="showDatePicker" max-width="600" scrollable>
+      <v-card class="date-picker-card" rounded="lg">
+        <div class="d-flex align-center justify-space-between px-4 pt-3">
+          <span class="house-section-title">选择看房日期</span>
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            size="small"
+            @click="showDatePicker = false"
+          ></v-btn>
+        </div>
+        <v-date-picker
+          color="primary"
+          v-model="selectedDate"
+          @update:modelValue="onDateSelected"
+          class="pa-2"
+          width="100%"
+        ></v-date-picker>
+      </v-card>
+    </v-dialog>
   </v-card>
-
 </template>
 
 <style scoped>
-.text-red {
-  color: #e53935;
+.house-hero { overflow: hidden; }
+.hero-carousel { border-radius: 10px; overflow: hidden; }
+.hero-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-placeholder { height: 420px; border-radius: 10px; background: var(--house-soft); }
+.hero-thumbs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.hero-thumb {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  opacity: .7;
+  transition: opacity .2s ease, border-color .2s ease;
 }
+.hero-thumb:hover { opacity: 1; }
+.hero-thumb--active { border-color: rgb(var(--v-theme-primary)); opacity: 1; }
+
+.hero-title { font-size: 1.6rem; font-weight: 700; line-height: 1.35; color: var(--house-ink); letter-spacing: -.01em; }
+.hero-price-box { padding: 14px 16px; border-radius: 10px; background: var(--house-soft); }
+.hero-price { font-size: 2rem; line-height: 1; }
+
+.hero-facts { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--house-line); border-radius: 10px; }
+.hero-fact { padding: 12px 8px; text-align: center; }
+.hero-fact + .hero-fact { border-left: 1px solid var(--house-line); }
+.hero-fact__value { font-weight: 700; font-size: 1.05rem; color: var(--house-ink); }
+.hero-fact__label { font-size: .75rem; color: var(--house-muted); margin-top: 2px; }
+
+.hero-list { display: grid; gap: 8px; font-size: .9rem; }
+.hero-list__row { display: flex; justify-content: space-between; gap: 12px; }
+
+.hero-landlord { display: flex; align-items: center; padding-top: 16px; border-top: 1px solid var(--house-line); }
 
 /* 操作按钮组 */
-.action-buttons {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.action-btn {
-  border-radius: 10px !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.5px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12) !important;
-}
-
-.action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2) !important;
-}
-
-.action-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-}
+.action-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
+.action-btn { flex: 1 1 0; min-width: 120px; font-weight: 600; }
 
 /* 日期选择卡片 */
-.date-picker-card {
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
+.date-picker-card { width: 100%; max-height: 90vh; overflow-y: auto; }
 
-/* 响应式调整 */
 @media (max-width: 600px) {
-  .date-picker-card {
-    max-height: 80vh;
-  }
-  .action-buttons {
-    flex-direction: column;
-  }
-  .action-btn {
-    width: 100%;
-  }
+  .date-picker-card { max-height: 80vh; }
+  .hero-placeholder { height: 240px; }
+  .hero-carousel { height: 260px !important; }
+  .hero-title { font-size: 1.3rem; }
+  .action-buttons { flex-direction: column; }
+  .action-btn { flex: none; width: 100%; }
 }
 </style>

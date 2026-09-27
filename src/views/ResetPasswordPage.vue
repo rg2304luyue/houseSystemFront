@@ -3,7 +3,9 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Icon } from "@iconify/vue";
 import apiClient from "@/api/client";
+import { useSnackbarStore } from "@/stores/snackbarStore";
 
+const snackbarStore = useSnackbarStore();
 const router = useRouter();
 const isLoading = ref(false);
 const resetForm = ref();
@@ -52,10 +54,10 @@ const sendVerificationCode = async () => {
       // 拦截器已校验成功，能执行到这里说明请求已成功
       isCodeSent.value = true;
       startCountdown();
-      alert("验证码已发送至您的邮箱，请查收（有效期2分钟）");
+      snackbarStore.showSuccessMessage("验证码已发送至您的邮箱，请查收（有效期2分钟）");
     } catch (error: any) {
       console.error("发送验证码出错", error);
-      alert(error?.response?.data?.message || error.message || "发送验证码出错");
+      snackbarStore.showErrorMessage(error?.response?.data?.message || error.message || "发送验证码出错");
     } finally {
       isLoading.value = false;
     }
@@ -97,11 +99,11 @@ const handleResetPassword = async () => {
       });
 
       // 拦截器已校验成功，能执行到这里说明请求已成功
-      alert("密码重置成功，请使用新密码登录");
+      snackbarStore.showSuccessMessage("密码重置成功，请使用新密码登录");
       router.push("/auth/signin");
     } catch (error: any) {
       console.error("重置密码出错", error);
-      alert(error?.response?.data?.message || error.message || "重置密码出错，请稍后重试");
+      snackbarStore.showErrorMessage(error?.response?.data?.message || error.message || "重置密码出错，请稍后重试");
     } finally {
       isLoading.value = false;
     }
@@ -114,150 +116,127 @@ const backToLogin = () => {
 </script>
 
 <template>
-  <div class="auth-wrapper">
-    <v-card color="white" class="auth-card" elevation="3">
-      <div class="card-header">
-        <v-icon icon="mdi:lock-reset" size="48" color="primary" class="mb-4"></v-icon>
-        <v-card-title class="text-h3 font-weight-bold primary--text">
-          重置密码
-        </v-card-title>
-        <v-card-subtitle class="text-subtitle-1 mt-2">
+  <div class="reset-wrapper">
+    <v-card class="reset-card pa-6 pa-sm-8">
+      <div class="text-center mb-6">
+        <div class="reset-icon mx-auto mb-4">
+          <v-icon icon="mdi-lock-reset" size="32" color="primary"></v-icon>
+        </div>
+        <h1 class="reset-title">重置密码</h1>
+        <p class="house-muted mt-2 text-body-2">
           请输入您的注册邮箱，我们将发送密码重置验证码
-        </v-card-subtitle>
+        </p>
       </div>
 
-      <v-card-text class="px-6 py-4">
-        <v-form
-          ref="resetForm"
-          class="text-left"
-          v-model="isFormValid"
-          lazy-validation
+      <v-form
+        ref="resetForm"
+        class="text-left"
+        v-model="isFormValid"
+        lazy-validation
+      >
+        <v-text-field
+          v-model="email"
+          :rules="emailRules"
+          label="电子邮箱"
+          placeholder="example@domain.com"
+          prepend-inner-icon="mdi-email-outline"
+          color="primary"
+          name="email"
+          validateOn="blur"
+          @keyup.enter="handleResetPassword"
+          class="mb-2"
+          :disabled="isCodeSent"
+        ></v-text-field>
+
+        <v-text-field
+          v-if="isCodeSent"
+          v-model="verificationCode"
+          :rules="codeRules"
+          label="验证码"
+          placeholder="请输入6位验证码"
+          prepend-inner-icon="mdi-message-text-outline"
+          color="primary"
+          name="verificationCode"
+          validateOn="blur"
+          @keyup.enter="handleResetPassword"
+          class="mb-2"
+        ></v-text-field>
+
+        <v-text-field
+          v-if="isCodeSent"
+          v-model="newPassword"
+          :rules="passwordRules"
+          label="新密码"
+          placeholder="请输入至少5位的新密码"
+          prepend-inner-icon="mdi-lock-outline"
+          color="primary"
+          name="newPassword"
+          type="password"
+          validateOn="blur"
+          @keyup.enter="handleResetPassword"
+          class="mb-2"
+        ></v-text-field>
+
+        <v-text-field
+          v-if="isCodeSent"
+          v-model="confirmPassword"
+          :rules="confirmPasswordRules"
+          label="确认密码"
+          placeholder="请再次输入新密码"
+          prepend-inner-icon="mdi-lock-check-outline"
+          color="primary"
+          name="confirmPassword"
+          type="password"
+          validateOn="blur"
+          @keyup.enter="handleResetPassword"
+          class="mb-2"
+        ></v-text-field>
+
+        <v-btn
+          :loading="isLoading"
+          block
+          size="large"
+          color="primary"
+          variant="flat"
+          class="font-weight-bold"
+          @click="handleResetPassword"
         >
-          <v-text-field
-            v-model="email"
-            :rules="emailRules"
-            label="电子邮箱"
-            placeholder="example@domain.com"
-            prepend-inner-icon="mdi:email-outline"
-            density="comfortable"
-            variant="outlined"
-            color="primary"
-            bg-color="#f8f9fa"
-            name="email"
-            validateOn="blur"
-            @keyup.enter="handleResetPassword"
-            class="mb-4"
-            :disabled="isCodeSent"
-          ></v-text-field>
+          <template v-if="!isCodeSent">
+            获取验证码
+          </template>
+          <template v-else>
+            重置密码
+            <span v-if="countdown > 0" class="ml-1">({{ countdown }}s)</span>
+          </template>
+        </v-btn>
 
-          <v-text-field
-            v-if="isCodeSent"
-            v-model="verificationCode"
-            :rules="codeRules"
-            label="验证码"
-            placeholder="请输入6位验证码"
-            prepend-inner-icon="mdi:message-text-outline"
-            density="comfortable"
-            variant="outlined"
-            color="primary"
-            bg-color="#f8f9fa"
-            name="verificationCode"
-            validateOn="blur"
-            @keyup.enter="handleResetPassword"
-            class="mb-4"
-          ></v-text-field>
+        <div class="d-flex align-center my-5">
+          <v-divider></v-divider>
+          <span class="px-3 text-caption house-muted">或</span>
+          <v-divider></v-divider>
+        </div>
 
-          <v-text-field
-            v-if="isCodeSent"
-            v-model="newPassword"
-            :rules="passwordRules"
-            label="新密码"
-            placeholder="请输入至少5位的新密码"
-            prepend-inner-icon="mdi:lock-outline"
-            density="comfortable"
-            variant="outlined"
-            color="primary"
-            bg-color="#f8f9fa"
-            name="newPassword"
-            type="password"
-            validateOn="blur"
-            @keyup.enter="handleResetPassword"
-            class="mb-4"
-          ></v-text-field>
-
-          <v-text-field
-            v-if="isCodeSent"
-            v-model="confirmPassword"
-            :rules="confirmPasswordRules"
-            label="确认密码"
-            placeholder="请再次输入新密码"
-            prepend-inner-icon="mdi:lock-check-outline"
-            density="comfortable"
-            variant="outlined"
-            color="primary"
-            bg-color="#f8f9fa"
-            name="confirmPassword"
-            type="password"
-            validateOn="blur"
-            @keyup.enter="handleResetPassword"
-            class="mb-4"
-          ></v-text-field>
-
-          <v-btn
-            :loading="isLoading"
-            block
-            size="x-large"
-            color="primary"
-            @click="handleResetPassword"
-            class="mt-2 mb-6"
-            height="48"
-          >
-            <template v-slot:loader>
-              <v-progress-circular indeterminate color="white"></v-progress-circular>
-            </template>
-            <span class="text-h6 font-weight-bold">
-              <template v-if="!isCodeSent">
-                获取验证码
-              </template>
-              <template v-else>
-                重置密码
-                <span v-if="countdown > 0">({{ countdown }}s)</span>
-              </template>
-            </span>
-          </v-btn>
-
-          <div class="d-flex align-center justify-center my-4">
-            <v-divider class="flex-grow-1"></v-divider>
-            <span class="px-4 text-caption text-grey">或</span>
-            <v-divider class="flex-grow-1"></v-divider>
-          </div>
-
-          <v-btn
-            variant="outlined"
-            color="primary"
-            block
-            size="large"
-            @click="backToLogin"
-            class="mb-4"
-          >
-            <Icon icon="mdi:arrow-left" class="mr-2" />
-            <span>返回登录页面</span>
-          </v-btn>
-        </v-form>
-      </v-card-text>
+        <v-btn
+          variant="outlined"
+          color="primary"
+          block
+          size="large"
+          prepend-icon="mdi-arrow-left"
+          @click="backToLogin"
+        >
+          返回登录页面
+        </v-btn>
+      </v-form>
     </v-card>
 
-    <div class="auth-footer mt-6 text-center">
-      <p class="text-body-2 text-grey-darken-1">
+    <div class="mt-6 text-center text-body-2 house-muted">
+      <p>
         还没有账号？
-        <router-link
-          to="/auth/signup"
-          class="text-primary font-weight-bold text-decoration-none"
-        >
+        <router-link to="/auth/signup" class="text-primary font-weight-bold">
           立即注册
         </router-link>
       </p>
-      <p class="text-caption text-grey mt-2">
+      <p class="text-caption mt-2">
         遇到问题？<a href="#" class="text-primary">联系客服</a>
       </p>
     </div>
@@ -265,46 +244,24 @@ const backToLogin = () => {
 </template>
 
 <style scoped>
-.auth-wrapper {
-  max-width: 500px;
-  margin: 0 auto;
-  padding: 24px;
+.reset-wrapper {
+  max-width: 440px;
+  margin: 24px auto;
 }
 
-.auth-card {
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+.reset-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--house-soft);
 }
 
-.card-header {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  padding: 32px 24px 24px;
-  text-align: center;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.v-card-title {
-  line-height: 1.2;
-}
-
-.v-card-subtitle {
-  color: #6c757d !important;
-}
-
-.v-text-field {
-  border-radius: 8px;
-}
-
-.v-btn {
-  letter-spacing: 0.5px;
-  text-transform: none;
-  border-radius: 8px;
-}
-
-.auth-footer {
-  padding: 16px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+.reset-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--house-ink);
 }
 </style>

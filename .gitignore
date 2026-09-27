@@ -16,3 +16,6 @@ Thumbs.db
 
 # 包管理器（项目使用 npm，不提交 yarn 锁文件）
 yarn.lock
+
+# 工具缓存
+.codex-npm-cache/

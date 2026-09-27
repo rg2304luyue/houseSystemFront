@@ -7,8 +7,7 @@
 import { ref, onMounted, watch, computed } from "vue";
 import { useSnackbarStore } from "@/stores/snackbarStore";
 import { useProfileStore } from "@/stores/profileStore";
-import { MdPreview } from "md-editor-v3";
-import "md-editor-v3/lib/preview.css";
+import SafeMarkdown from "@/components/chat/SafeMarkdown.vue";
 import apiClient from "@/api/client";
 
 const props = defineProps<{ houseId: number | string }>();
@@ -139,137 +138,150 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="message-board">
-    <v-container fluid>
-      <v-row justify="center">
-        <v-col cols="12" md="12">
-          <!-- 加载状态 -->
-          <v-progress-linear
-            v-if="isLoading"
-            indeterminate
-            color="primary"
-            class="mb-4"
-          ></v-progress-linear>
-          
-          <!-- 留言列表 -->
-          <v-card class="mb-6 pa-5" elevation="2" v-if="!isLoading && messages.length > 0">
-            <h2 class="text-h5 mb-4">留言评论</h2>
-            
-            <perfect-scrollbar class="message-list" style="max-height: 500px;">
-              <div v-for="(message, index) in messages" :key="index" class="mb-6">
-                <div class="d-flex justify-space-between align-center mb-2">
-                  <div>
-                    <span class="font-weight-bold">{{ message.username }}</span>
-                    <v-chip
-                      v-if="message.username === currentUser"
-                      size="small"
-                      color="primary"
-                      class="ml-2"
-                    >
-                      我的留言
-                    </v-chip>
-                    <span v-if="message.atUsername" class="text-caption text-grey ml-2">
-                      回复 @{{ message.atUsername }}
-                    </span>
-                  </div>
-                  <span class="text-caption text-grey">{{ formatTime(message.timestamp) }}</span>
-                </div>
-                
-                <v-card variant="outlined" class="pa-4">
-                  <md-preview :modelValue="message.content" />
-                </v-card>
-              </div>
-            </perfect-scrollbar>
-          </v-card>
-          
-          <!-- 无留言提示 -->
-          <v-card 
-            v-if="!isLoading && messages.length === 0" 
-            class="mb-6 pa-5 text-center" 
-            elevation="2"
-          >
-            <v-icon size="64" color="grey lighten-1" class="mb-4">mdi-comment-outline</v-icon>
-            <p class="text-h6">暂无留言</p>
-            <p class="text-body-1 text-grey">快来发表第一条留言吧！</p>
-          </v-card>
-          
-          <!-- 留言表单 -->
-          <v-card class="pa-5" elevation="2">
-            <h1 class="text-h4 text-center mb-6">留言板</h1>
-            
-            <p class="text-center mb-6">
-              欢迎留下您的宝贵意见、建议或问题，我们会尽快查看并回复。
-            </p>
-            
-            <!-- 用户信息提示 -->
-            <v-alert
-              v-if="currentUser"
-              type="info"
-              variant="tonal"
-              class="mb-4"
-            >
-              当前用户: {{ currentUser }}
-            </v-alert>
-            
-            <v-alert
-              v-else
-              type="warning"
-              variant="tonal"
-              class="mb-4"
-            >
-              请先登录后再留言
-            </v-alert>
-            
-            <!-- 留言表单 -->
-            <v-form @submit.prevent="submitMessage">
-              <v-textarea
-                v-model="newMessage"
-                label="留言内容"
-                variant="outlined"
-                rows="5"
-                required
-                :disabled="!currentUser"
-                class="mb-4"
-              ></v-textarea>
-              
-              <div class="text-center">
-                <v-btn
+  <v-card flat class="message-board">
+    <div class="d-flex align-center justify-space-between flex-wrap ga-2 px-5 pt-5 pb-3">
+      <div>
+        <h2 class="house-section-title">留言评论</h2>
+        <div class="house-muted text-caption mt-1">欢迎留下您的意见、建议或问题，我们会尽快查看并回复</div>
+      </div>
+      <v-chip v-if="!isLoading && messages.length > 0" size="small" variant="tonal" label>
+        共 {{ messages.length }} 条
+      </v-chip>
+    </div>
+
+    <v-progress-linear
+      v-if="isLoading"
+      indeterminate
+      color="primary"
+    ></v-progress-linear>
+
+    <v-card-text class="px-5 pt-2 pb-5">
+      <!-- 留言列表 -->
+      <perfect-scrollbar v-if="!isLoading && messages.length > 0" class="message-list" style="max-height: 500px;">
+        <div v-for="(message, index) in messages" :key="index" class="message-item">
+          <v-avatar color="primary" variant="tonal" size="36" class="mr-3 flex-shrink-0">
+            {{ (message.username || '?').slice(0, 1) }}
+          </v-avatar>
+          <div class="flex-grow-1 min-w-0">
+            <div class="d-flex justify-space-between align-center flex-wrap ga-1 mb-1">
+              <div class="d-flex align-center flex-wrap ga-2">
+                <span class="font-weight-bold">{{ message.username }}</span>
+                <v-chip
+                  v-if="message.username === currentUser"
+                  size="x-small"
                   color="primary"
-                  size="large"
-                  type="submit"
-                  :disabled="!currentUser"
+                  variant="tonal"
+                  label
                 >
-                  提交留言
-                </v-btn>
+                  我的留言
+                </v-chip>
+                <span v-if="message.atUsername" class="text-caption house-muted">
+                  回复 @{{ message.atUsername }}
+                </span>
               </div>
-            </v-form>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
-  </div>
+              <span class="text-caption house-muted">{{ formatTime(message.timestamp) }}</span>
+            </div>
+            <div class="message-content">
+              <SafeMarkdown :content="message.content" />
+            </div>
+          </div>
+        </div>
+      </perfect-scrollbar>
+
+      <!-- 无留言提示 -->
+      <div v-if="!isLoading && messages.length === 0" class="house-empty py-8">
+        <v-icon>mdi-comment-outline</v-icon>
+        <span>暂无留言，快来发表第一条留言吧！</span>
+      </div>
+
+      <!-- 留言表单 -->
+      <div class="message-form mt-4">
+        <v-alert
+          v-if="!currentUser"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="mb-3"
+        >
+          请先登录后再留言
+        </v-alert>
+        <div v-else class="house-muted text-caption mb-2">以 {{ currentUser }} 的身份发表留言</div>
+
+        <v-form @submit.prevent="submitMessage">
+          <v-textarea
+            v-model="newMessage"
+            label="留言内容"
+            variant="outlined"
+            rows="4"
+            auto-grow
+            required
+            :disabled="!currentUser"
+            hide-details="auto"
+            class="mb-3"
+          ></v-textarea>
+
+          <div class="d-flex justify-end">
+            <v-btn
+              color="primary"
+              variant="flat"
+              type="submit"
+              prepend-icon="mdi-send"
+              :disabled="!currentUser"
+            >
+              提交留言
+            </v-btn>
+          </div>
+        </v-form>
+      </div>
+    </v-card-text>
+  </v-card>
 </template>
 
 <style scoped lang="scss">
 .message-board {
-  padding: 2rem 0;
-  
   .message-list {
-    padding-right: 1rem;
-    
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-    
-    &::-webkit-scrollbar-thumb {
-      background-color: rgba(0, 0, 0, 0.2);
-      border-radius: 3px;
-    }
+    padding-right: 8px;
   }
+}
+
+.message-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--house-line);
+
+  &:first-child { padding-top: 4px; }
+}
+
+.message-content {
+  color: var(--house-ink);
+  font-size: .9rem;
+  line-height: 1.6;
+}
+
+.message-form {
+  padding-top: 16px;
+  border-top: 1px solid var(--house-line);
+}
+
+.min-w-0 { min-width: 0; }
+
+:deep(.md-editor) {
+  --md-bk-color: transparent;
+  --md-color: var(--house-ink);
+  background-color: transparent !important;
+  color: var(--house-ink);
 }
 
 :deep(.md-editor-preview-wrapper) {
   padding: 0;
   background-color: transparent !important;
 }
+
+:deep(.md-editor-preview) {
+  color: var(--house-ink);
+  font-size: .9rem;
+}
+
+:deep(.md-editor-preview p:last-child) { margin-bottom: 0; }
 </style>

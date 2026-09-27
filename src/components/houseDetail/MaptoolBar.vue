@@ -1,28 +1,37 @@
 <template>
   <v-toolbar
     rounded="lg"
+    color="surface"
+    density="compact"
     border
     floating
-    class="map-floating-toolbar" > 
+    class="map-floating-toolbar"
+  >
     <v-text-field
       density="compact"
-      placeholder="Search"
+      placeholder="搜索周边地点"
       prepend-inner-icon="mdi-magnify"
       variant="solo"
-      class="mx-2 flex-grow-1" style="min-width: 180px;" flat
+      class="mx-2 flex-grow-1"
+      style="min-width: 160px;"
+      flat
       hide-details
       single-line
-      clearable 
+      clearable
     ></v-text-field>
 
     <template v-slot:append>
       <v-btn
         density="comfortable"
         icon="mdi-crosshairs-gps"
+        color="primary"
+        variant="text"
       ></v-btn>
       <v-btn
-        class="ms-1" density="comfortable"
+        class="ms-1"
+        density="comfortable"
         icon="mdi-dots-vertical"
+        variant="text"
       ></v-btn>
     </template>
   </v-toolbar>
@@ -30,21 +39,17 @@
 
 <style scoped>
 .map-floating-toolbar {
-  position: absolute; 
-  top: 16px;          /* 距离顶部16px (可调整) */
-  left: 50%;          /* 先将其左边缘移到父容器中心 */
-  transform: translateX(-50%); /* 再将其自身向左移动50%的宽度，实现水平居中 */
-  margin-top: 80px;
-  
-  width: clamp(300px, 60%, 500px); /* 最小300px，尝试占父容器60%，最大不超过500px */
-
-  z-index: 10;       
-  
- 
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(260px, 70%, 480px);
+  z-index: 10;
+  box-shadow: var(--house-shadow);
 }
 
-/* 微调 v-text-field 在 toolbar 中的表现 */
-.map-floating-toolbar .v-text-field {
-  background-color: transparent !important; /* 如果 variant="solo" 导致了不想要的背景色 */
+.map-floating-toolbar :deep(.v-field) {
+  background-color: transparent !important;
+  box-shadow: none !important;
 }
 </style>

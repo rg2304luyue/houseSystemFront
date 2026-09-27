@@ -1,35 +1,18 @@
-<!--
-* @Component:
-* @Maintainer: J.K. Yang
-* @Description:
--->
 <script setup lang="ts">
-import { Icon } from "@iconify/vue";
-import { useTheme } from "vuetify";
 import { useCustomizeThemeStore } from "@/stores/customizeTheme";
+
+// App.vue 监听 darkTheme 并同步 Vuetify 主题，这里只切换持久化状态
 const customizeTheme = useCustomizeThemeStore();
-
-const theme = useTheme();
-
-const toggleTheme = () => {
-  theme.global.name.value = theme.global.current.value.dark ? "light" : "dark";
-  customizeTheme.darkTheme = theme.global.current.value.dark;
-};
-
-const isDark = computed(() => theme.global.current.value.dark);
 </script>
 
 <template>
-  <v-btn v-if="isDark" @click="toggleTheme" icon>
-    <Icon width="30" icon="line-md:moon-filled-loop" />
-  </v-btn>
-
-  <v-btn v-else @click="toggleTheme" icon color="white" class="text-red">
-    <Icon
-      width="30"
-      icon="line-md:moon-filled-alt-to-sunny-filled-loop-transition"
-    />
+  <v-btn
+    icon
+    variant="text"
+    size="small"
+    :title="customizeTheme.darkTheme ? '切换到浅色' : '切换到深色'"
+    @click="customizeTheme.darkTheme = !customizeTheme.darkTheme"
+  >
+    <v-icon>{{ customizeTheme.darkTheme ? "mdi-weather-sunny" : "mdi-weather-night" }}</v-icon>
   </v-btn>
 </template>
-
-<style scoped lang="scss"></style>

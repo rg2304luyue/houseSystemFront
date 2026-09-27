@@ -61,8 +61,8 @@ export const routes = [
     meta: {
       requiresAuth: true,
       layout: "ui",
-      title: "Profile",
-      category: "Config",
+      title: "个人中心",
+      category: "账户",
     },
   },
   {
@@ -127,10 +127,21 @@ const router = createRouter({
   },
 });
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const authStore = useAuthStore();
   if (to.matched.some((record) => record.meta.requiresAuth) && !authStore.isAuthenticated) {
     return { name: "auth-signin", query: { redirect: to.fullPath } };
+  }
+
+  if (authStore.isAuthenticated) {
+    try {
+      await authStore.refreshProfile();
+    } catch {
+      if (!authStore.isAuthenticated && to.matched.some((record) => record.meta.requiresAuth)) {
+        return { name: "auth-signin", query: { redirect: to.fullPath } };
+      }
+      if (to.matched.some((record) => record.meta.requiresAuth)) return false;
+    }
   }
 
   const allowedRoles = to.meta.roles as number[] | undefined;
