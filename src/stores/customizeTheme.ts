@@ -23,7 +23,7 @@ export const useCustomizeThemeStore = defineStore({
     primaryColor: {
       colorId: 2,
       colorName: "grey",
-      colorValue: "#0f766e",
+      colorValue: "#2563eb",
     },
     themeDrawer: false, // 新增这个状态
     localCode: "en",

@@ -21,6 +21,15 @@
 | CSS          | Sass                                       |
 | 测试         | Vitest 0.30 + happy-dom（`src/test/` 共 5 个逻辑单测） |
 
+## 界面风格
+
+整套界面基于统一设计令牌（`src/styles/main.scss` 中的 `--house-*` 变量），亮/暗双主题自动切换：
+
+- 主色：晴空蓝（亮 `#2563eb` / 暗 `#60a5fa`），价格与强调色：橙 `#f2622e`
+- 字体：Inter + Noto Sans SC；卡片 12px 圆角、细边框 + 轻阴影
+- 通用工具类：`.house-price`（价格）、`.house-muted`（次要文字）、`.house-section-title`、`.house-empty`（空状态）、`.house-hover-lift`（悬停上浮）
+- 调整全站配色只需改 `src/plugins/vuetify.ts` 主题色与 `src/styles/main.scss` 令牌两处
+
 ## 项目结构
 
 ```
